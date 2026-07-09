@@ -1,0 +1,138 @@
+===============================================================================
+DEPLOY SPEDGENERATOR — CHECKLIST COMPLETA
+Criado: 2026-05-19
+Status: PENDENTE (precisa máquina dedicada)
+===============================================================================
+
+REQUISITO: Máquina Windows dedicada com tela ativa (automação GUI).
+Sistema usa pywinauto/pyautogui — precisa sessão Windows com display.
+
+===============================================================================
+1. SOFTWARE PARA INSTALAR
+===============================================================================
+
+1.1 Python 3.11+
+    - https://www.python.org/downloads/
+    - MARCAR "Add Python to PATH" no instalador
+    - Testar: python --version
+
+1.2 PostgreSQL 15
+    - https://www.enterprisedb.com/downloads/postgres-postgresql-downloads
+    - Anotar senha do superuser (vai pro .env)
+    - Porta padrão: 5432
+    - Testar: "C:\Program Files\PostgreSQL\15\bin\psql.exe" -U postgres -c "SELECT version();"
+
+1.3 AutoHotkey v2
+    - https://www.autohotkey.com/download/
+    - Instalar padrão
+    - Testar: "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe" --help
+
+1.4 ACS Gerente (Sintese)
+    - Instalar ACS Sintese normalmente
+    - Confirmar existência de:
+      - C:\ACSSoft\Sintese\Gerente SPED\gerente.exe
+      - C:\ACSSoft\Sintese\Gerente SPED\acsgerenteNV.ini (template nuvem)
+
+1.5 Dependências Python (pip)
+    pip install python-dotenv supabase psutil pywinauto pyautogui psycopg2-binary streamlit Pillow
+    Testar: python -c "import pywinauto; import pyautogui; import psycopg2; print('OK')"
+
+===============================================================================
+2. COPIAR PROJETO
+===============================================================================
+
+Copiar para C:\SpedGenerator\ no servidor:
+  - Todos *.py
+  - Pasta AHK\ com scripts .ahk
+  - .env (ajustar credenciais)
+
+NÃO copiar: dist\, __pycache__\, *.log, *.exe
+
+===============================================================================
+3. CONFIGURAR .env NO SERVIDOR
+===============================================================================
+
+Criar C:\SpedGenerator\.env:
+
+SUPABASE_URL=https://clxoqogbypebxmpowjls.supabase.co
+SUPABASE_KEY=<chave service_role>
+PG_PASSWORD=<senha postgres do servidor>
+
+===============================================================================
+4. AJUSTAR config.py NO SERVIDOR
+===============================================================================
+
+Caminhos que PRECISAM mudar:
+
+BACKUP_DIR       = r"C:\Backups_Novo"           ← backups já locais no servidor
+PG_BIN_DIR       = r"C:\Program Files\PostgreSQL\15\bin"  ← confirmar versão
+ACS_EXE_PATH     = r"C:\ACSSoft\Sintese\Gerente SPED\gerente.exe"
+ACS_INI_PATH     = r"C:\ACSSoft\Sintese\Gerente SPED\acsgerente.ini"
+AHK_EXE_PATH     = r"C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe"
+LOCAL_BACKUP_DIR  = r"C:\SpedGenerator\Bancos"
+SPED_EXPORT_DIR   = r"C:\ACS_Exporta"
+
+NOTA: No servidor backups já são locais. copiar_backup_local() vai copiar
+local→local (funciona, mas pode otimizar no futuro pra skip).
+
+MELHORIA FUTURA: config.py ler tudo de .env pra não editar .py no servidor.
+
+===============================================================================
+5. SESSÃO WINDOWS (CRÍTICO)
+===============================================================================
+
+Sistema usa automação de tela — PRECISA sessão ativa com display.
+
+Opção A — RDP sempre aberto:
+  - Conecta RDP, roda sistema dentro, NÃO fecha RDP (minimiza)
+
+Opção B — Auto-logon + sessão persistente:
+  - Win+R → netplwiz → desmarca "Users must enter..." → OK → senha
+  - Task Scheduler pra rodar watcher.py no logon
+  - tscon RDP-Tcp#0 /dest:console (manter sessão após desconectar)
+
+===============================================================================
+6. TESTAR
+===============================================================================
+
+cd C:\SpedGenerator
+
+# Teste 1: Supabase conecta?
+python -c "from supabase_client import listar_empresas_liberadas; print(listar_empresas_liberadas())"
+
+# Teste 2: dry run
+python main.py --dry-run
+
+# Teste 3: status
+python main.py --status
+
+# Teste 4: teste real com 1 posto
+python main.py --posto "NOME_TESTE"
+
+===============================================================================
+7. PRODUÇÃO
+===============================================================================
+
+Rodar watcher (loop contínuo):
+  python watcher.py --intervalo 30
+
+Ou Task Scheduler pra rodar main.py a cada X minutos.
+
+===============================================================================
+8. ESTRUTURA NO SERVIDOR
+===============================================================================
+
+C:\SpedGenerator\          ← projeto
+├── .env                   ← credenciais
+├── config.py              ← caminhos ajustados
+├── main.py                ← entrada principal
+├── watcher.py             ← loop contínuo
+├── AHK\                   ← scripts AutoHotkey
+└── ... (demais .py)
+
+C:\SpedGenerator\Bancos\   ← backups temporários (auto-cria)
+C:\ACS_Exporta\            ← SPED gerados (saída)
+C:\Backups_Novo\           ← .backup originais
+C:\ACSSoft\                ← ACS Gerente
+C:\Program Files\PostgreSQL\15\
+C:\Program Files\AutoHotkey\v2\

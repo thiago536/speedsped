@@ -1,0 +1,168 @@
+ANÁLISE DE ESCALABILIDADE E PARALELISMO
+
+Antes de implementar novas funcionalidades, preciso da sua opinião técnica sobre uma possível otimização do pipeline.
+
+NÃO implemente nada ainda.
+
+Primeiro faça uma análise da arquitetura atual e apresente uma recomendação.
+
+==================================================
+CONTEXTO
+========
+
+Hoje o fluxo funciona aproximadamente assim:
+
+Empresa 1
+
+* Backup
+* Restore
+* Geração ACS
+
+Empresa 2
+
+* Backup
+* Restore
+* Geração ACS
+
+Empresa 3
+
+* Backup
+* Restore
+* Geração ACS
+
+Tudo sequencial.
+
+Isso funciona, mas pode desperdiçar tempo.
+
+==================================================
+IDEIA
+=====
+
+Minha hipótese é que apenas a etapa do ACS precisa ser exclusiva.
+
+Ou seja:
+
+* Backup pode ocorrer em paralelo.
+* Restore pode ocorrer em paralelo.
+* Geração ACS continua sendo única.
+
+Exemplo:
+
+Fila inicial:
+
+Empresa A
+Empresa B
+Empresa C
+Empresa D
+
+Enquanto o ACS gera A:
+
+* Restore B
+* Restore C
+* Restore D
+
+Quando A terminar:
+
+B já está restaurada.
+
+ACS inicia B imediatamente.
+
+Enquanto ACS gera B:
+
+* Restore E
+* Restore F
+* Restore G
+
+E assim por diante.
+
+==================================================
+OBJETIVO
+========
+
+Transformar a geração em um pipeline.
+
+Etapa 1:
+BACKUP
+
+Etapa 2:
+RESTORE
+
+Etapa 3:
+GERAÇÃO ACS
+
+As etapas 1 e 2 poderiam alimentar uma fila de geração.
+
+==================================================
+O QUE EU QUERO SABER
+====================
+
+Analise o projeto atual e responda:
+
+1. O restore concorrente é tecnicamente seguro?
+
+2. Existe risco de:
+
+   * corrupção
+   * conflito entre bancos
+   * contenção de disco
+   * contenção de CPU
+   * contenção do PostgreSQL
+
+3. Quantos restores simultâneos fariam sentido?
+
+Exemplo:
+
+* 2
+* 3
+* 5
+* outro valor
+
+4. O ganho real de performance justificaria a complexidade?
+
+5. Existe alguma limitação atual do projeto que impediria essa arquitetura?
+
+==================================================
+IMPORTANTE
+==========
+
+A geração ACS deve continuar sendo:
+
+* uma empresa por vez
+* uma automação por vez
+* uma instância por vez
+
+Não quero paralelizar ACS.
+
+O objetivo é apenas deixar uma fila de bancos já preparados aguardando geração.
+
+==================================================
+ARQUITETURA PROPOSTA
+====================
+
+Gostaria que você avaliasse uma arquitetura semelhante a:
+
+FILA DE BACKUPS
+↓
+WORKERS DE RESTORE
+↓
+FILA DE BANCOS PRONTOS
+↓
+WORKER ÚNICO ACS
+↓
+ORGANIZAÇÃO DOS ARQUIVOS
+
+==================================================
+ENTREGA ESPERADA
+================
+
+Não implemente ainda.
+
+Primeiro apresente:
+
+1. Sua opinião técnica.
+2. Riscos.
+3. Benefícios.
+4. Complexidade.
+5. Recomendação final.
+
+Se considerar viável, proponha uma arquitetura concreta para o SpedGenerator antes de qualquer alteração no código.

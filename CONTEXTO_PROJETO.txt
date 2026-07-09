@@ -1,0 +1,127 @@
+===============================================================================
+ SpedGenerator — CONTEXTO COMPACTO DO PROJETO
+ Atualizado: 2026-06-10  |  Detalhes completos em: C:\SpedGenerator\CLAUDE.md
+===============================================================================
+
+O QUE É
+-------
+Robô (daemon Python, roda 24h) que gera arquivos SPED Fiscal/Contribuicoes
+automaticamente para postos de combustivel. A cada 5 min: consulta o Supabase,
+baixa o banco atualizado do servidor remoto, restaura no PostgreSQL local, abre
+o ACS Gerente e gera os .txt, depois move para C:\ACS_Exporta\{POSTO}\.
+
+Supabase = somente leitura. Controle do que ja foi gerado = C:\ACS_Exporta\gerados.json
+
+
+FLUXO (por empresa liberada)
+----------------------------
+1. supabase_client  -> lista empresas status=liberada (Nuvem)
+2. tracking.ja_gerado -> pula as que ja foram feitas
+3. backup_finder.encontrar_backup -> valida data+tamanho do .backup
+      se velho/vazio: backup_manager.executar_pg_dump(forcar=True) baixa do servidor
+      se nao conseguir backup fresco: RETORNA None e BLOQUEIA a geracao
+4. postgres_manager.criar_e_restaurar -> DROPA o banco _local e restaura o backup ATUAL
+5. postgres_manager.fix_*            -> ajustes que o ACS exige
+6. ini_manager.atualizar_ini         -> aponta ACS para o banco _local
+7. acs_runner -> acs_automation      -> dirige a GUI do ACS Gerente e gera os .txt
+8. file_manager.organizar_sped_posto -> valida CNPJ/contagem, move p/ C:\ACS_Exporta\{POSTO}
+9. tracking.registrar_gerado/erro
+
+
+ARQUIVOS E RESPONSABILIDADES
+----------------------------
+NUCLEO (producao):
+  main.py            Orquestrador/daemon: loop, pipeline preparar->gerar, lock de instancia
+  config.py          Le .env e expoe constantes (paths, intervalos, PG_DUMP_PARALLEL/TIMEOUT)
+  supabase_client.py Conexao Supabase; listar_empresas_liberadas()
+  backup_finder.py   encontrar_backup(): decide usar/rebaixar; BLOQUEIA se nao tiver fresco
+  backup_manager.py  executar_pg_dump() (download), resolve nome/credenciais, listar_desatualizados()
+  postgres_manager.py Restore local, criar_banco (dropa+recria), dropar_banco, fix_*, CNPJs
+  acs_runner.py      Orquestra geracao por empresa: modo SPED, retry, steps (FISCAL/CONTRIB/...)
+  acs_automation.py  AUTOMACAO DA GUI do ACS Gerente (pywinauto). *** ponto fragil ***
+  ini_manager.py     Escreve acsgerente.ini (Caminho=xxx_local)
+  file_manager.py    Valida/move .txt; obter_arquivos_validos_existentes; screenshots de erro
+  tracking.py        gerados.json: registrar_gerado/erro, ja_gerado (3 tent/dia, cooldown 15min)
+  banco_tracker.py   Rastreia bancos _local ativos; limpeza mensal
+  mapping_config.py  obter_base_mapeada(), deve_ignorar_base() (bases Web/sem backup)
+  progresso.py       Escreve progresso para o painel
+  command_processor.py Comandos do painel Electron (thread no daemon)
+
+CONFIG/DADOS:
+  .env               Credenciais e caminhos. DISABLE_REMOTE_BACKUP=False
+  bancos_nomes.json  Mapa nome->{host,port,user,password,dbname}. host=pgsql.e-prosys.com. SALVAR SEM BOM
+  servidores.json    Fallback: padrao(pgsql.e-prosys.com) e santavitoria(187.45.181.113)
+  acs_versoes.json   Versoes alternativas ACS (GerenteDM/Gerente659 - executaveis podem faltar)
+
+PAINEL/FERRAMENTAS: painel.py, frontend_supabase.py, admin_supabase.py
+
+OPERACAO (.bat):
+  iniciar_sistema.bat   PONTO DE ENTRADA OFICIAL (finaliza tudo + sobe daemon + painel)
+  finalizar_sistema.bat Encerra daemon/ACS/pg_dump/restore e libera lock
+  baixar_pendentes.bat  Baixa manualmente so os backups desatualizados
+
+DEV/TESTE (NAO sao producao, pode arquivar):
+  _diag_*.py, debug_menu.py, descobrir_teclas.py, gravador.py, capture_screen.py,
+  test_menu.py, testar_*.py, abrir_sistema.py, install_triggers.py, watcher.py,
+  bats de agendamento (_agendar_tarefas, *_noturno, atualizar_backups, download_pendentes)
+  Backup Novo.bat  <- LEGADO COM BUG (pg_dump duplicado). NAO USAR.
+
+
+ESTADO EM DISCO
+---------------
+  C:\Backups_Novo\*.backup        Backups baixados (copias; original no servidor remoto)
+  C:\SpedGenerator\Bancos\        Copia temporaria do restore
+  PostgreSQL {nome}_local         Banco restaurado de cada posto
+  C:\ACS_Exporta\{POSTO}\         Arquivos SPED finais (.txt)
+  C:\ACS_Exporta\gerados.json     Tracking
+  C:\ACS_Exporta\spedgenerator.lock  Lock de instancia (PID)
+  C:\ACS_Exporta\daemon.log  +  C:\SpedGenerator\spedgenerator.log   Logs
+  >>> Arquivos de ESTADO ficam em C:\ACS_Exporta, NAO em C:\SpedGenerator <<<
+
+
+STATUS ATUAL
+============
+FUNCIONA (verificado 2026-06-10):
+  [OK] Deteccao de liberacao no Supabase + agendamento
+  [OK] Backup sempre fresco (compara DATA+HORA do backup vs data_liberacao)
+  [OK] Download sob demanda, 1 por vez, sem concorrencia
+  [OK] Restore sempre do backup ATUAL (dropa banco velho; nao reusa dado antigo)
+  [OK] Protecao de dados: download que falha NAO destroi backup bom (temp unico + os.replace)
+  [OK] Backup vazio/corrompido (<100 bytes) e REJEITADO (nunca restaura vazio)
+  [OK] Trava de instancia unica
+  Exemplo: POSTO FAGUNDES liberado 08:31 -> backup 08:32 -> restaurado 165 MB do backup atual
+
+NAO FUNCIONA (desde ~2026-06-08) - PROBLEMA SEPARADO, NAO E BACKUP:
+  [X] Geracao do .txt no ACS: "ACS Gerente nao abriu em 45s" / "Nenhum arquivo SPED valido"
+      0 sucessos / 23 erros desde 08/06.
+      O ACS ABRE na mao (login TAcesso = "ACS Sintese - Acesso ao Sistema").
+      Intermitente: popup "Atencao" (#32770) trava no Splash antes do login.
+      Investigar acs_automation.py: iniciar_sessao_acs() e _fechar_avisos_startup().
+
+FRAGIL / DIVIDAS:
+  - Automacao GUI depende de titulos de janela/popups -> quebra com update do ACS
+  - Tracking nao detecta re-liberacao por nova data (ja_gerado ve so id+informacoes_sped)
+        forcar: python main.py --limpar-tracking <id>   |   --reprocessar <id>
+  - Servidor remoto RECUSA dumps concorrentes (gera 0 byte) -> manter PG_DUMP_PARALLEL=1
+  - Bancos _local acumulam (~73 GB); limpeza mensal; monitorar disco C:
+  - Supabase: POSTO ZABELE e SAO FRANCISCO BELEM com nome_base=None (nao processaveis)
+  - MASTODONTE em servidor diferente (bloqueado corretamente)
+  - Pasta com ~70 arquivos misturando producao, dev/teste e docs antigos
+
+
+AMBIENTE
+--------
+  Python:       C:\Users\SERVIDOR SPED\AppData\Local\Python\pythoncore-3.14-64\python.exe
+  PostgreSQL:   C:\Program Files\PostgreSQL\15\bin  (local, senha 123)
+  Servidor:     pgsql.e-prosys.com:5432 (user postgres)
+  ACS Gerente:  C:\ACSSoft\Sintese\Gerente SPED\gerente.exe
+
+
+REGRAS DE OURO
+--------------
+  1. Nunca gerar SPED com dado velho (se nao da p/ garantir fresco, bloqueia - isso e o certo)
+  2. Um pg_dump por vez (concorrente falha e zera backups)
+  3. Backup e copia; dado real esta no servidor (apagar .backup local nao perde dado)
+  4. Salvar bancos_nomes.json SEM BOM (UTF-8 puro)
+  5. Backup/dados e geracao-ACS sao DOIS problemas separados
+===============================================================================

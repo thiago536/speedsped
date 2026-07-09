@@ -1,0 +1,27 @@
+============================================================
+              SPEEDSPED - SiteGenTech
+                TELA: ACESSO REMOTO
+============================================================
+
+Esta tela e uma ferramenta utilitaria de alta produtividade. Ela permite gerar e exportar 
+rapidamente arquivos de conexao 'acsgerente.ini' para computadores clientes se conectarem 
+a qualquer banco de dados de teste PostgreSQL restaurado no servidor principal.
+
+COMPONENTES E FUNCIONALIDADES PRINCIPAIS:
+-----------------------------------------
+1. Selecao e Filtro do Banco: 
+   Lista dinamica e interativa contendo apenas os bancos de dados que de fato foram 
+   restaurados e existem na maquina local/servidor.
+
+2. Parametrizacao de Rede: 
+   Campos configuraveis para definir o IP do servidor na rede e a porta do PostgreSQL.
+
+3. Preview do Arquivo INI Interativo: 
+   Exibe em tempo real o preview formatado e validado do arquivo 'acsgerente.ini' contendo 
+   todas as secoes necessarias ([Banco de Dados], [Cliente], [Sistema], [Ambiente], etc.).
+
+4. Acoes de Exportacao Rapida:
+   - Copiar INI: Copia o bloco INI instantaneamente para a area de transferencia para 
+     facilitar o envio por chat ou e-mail.
+   - Salvar Como...: Abre uma caixa de dialogo nativa do Windows para salvar o arquivo 
+     diretamente como 'acsgerente.ini' na pasta local correta da maquina cliente.

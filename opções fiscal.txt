@@ -1,0 +1,4 @@
+[Resolução Base] 1366x768
+[Janela: ACS Sintese - Gerente] Mouse: Clique Esquerdo em (302, 33) | Espera anterior: 1.46s
+[Janela: ACS Sintese - Gerente] Mouse: Clique Esquerdo em (349, 112) | Espera anterior: 1.48s
+[Janela: ACS Sintese - Gerente] Mouse: Clique Esquerdo em (636, 370) | Espera anterior: 1.91s

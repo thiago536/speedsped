@@ -1,0 +1,24 @@
+============================================================
+              SPEEDSPED - SiteGenTech
+                TELA: LOG DO SISTEMA
+============================================================
+
+O Log do Sistema e a principal ferramenta de diagnostico e suporte tecnico do SPEEDSPED. 
+Ele exibe em tempo real o console de execucao operacional do Daemon de automacao.
+
+COMPONENTES E FUNCIONALIDADES PRINCIPAIS:
+-----------------------------------------
+1. Visualizador de Terminal Monoespacado: 
+   Interface escura estilizada simulando um terminal de comando com fonte premium JetBrains 
+   Mono, projetado para excelente escaneabilidade e leitura de logs extensos.
+
+2. Filtro por Nivel de Severidade: 
+   Botoes de selecao rapida para filtrar as mensagens exibidas:
+   - ALL: Log completo com todas as informacoes.
+   - INFO: Apenas informacoes de andamento normal e rotina.
+   - WARNING: Avisos de gargalos e pequenos desvios operacionais.
+   - ERROR: Erros criticos de sistema, conexao ou validacao que impediram a execucao.
+
+3. Filtro de Busca de Texto: 
+   Caixa de pesquisa para buscar termos especificos (como nome de uma empresa ou codigo 
+   de erro) dentro das ultimas 200 linhas de logs armazenadas.

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>SPEEDSPED - Inicializando</title>
+  <style>
+    /* Premium Steel Dark Custom Font and Reset */
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+    
+    * { 
+      margin: 0; 
+      padding: 0; 
+      box-sizing: border-box; 
+    }
+    
+    body {
+      width: 500px; 
+      height: 300px;
+      background: linear-gradient(135deg, #0a0c10 0%, #111318 60%, #161921 100%);
+      border: 1px solid #222732;
+      display: flex; 
+      flex-direction: column;
+      align-items: center; 
+      justify-content: center;
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #e8eaf0; 
+      overflow: hidden;
+      border-radius: 12px;
+      position: relative;
+    }
+
+    /* Ambient glow in background */
+    .glow {
+      position: absolute;
+      width: 150px;
+      height: 150px;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, rgba(34, 211, 238, 0.05) 50%, transparent 100%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 1;
+    }
+    
+    /* Branding elements container */
+    .branding-box {
+      z-index: 2;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .logo-symbol {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #3b82f6 0%, #22d3ee 100%);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+      animation: bounceIn 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .logo-symbol-inner {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 22px;
+      font-weight: 800;
+      color: #0a0c10;
+      letter-spacing: -1px;
+    }
+
+    .logo { 
+      font-size: 2.2rem; 
+      font-weight: 800; 
+      letter-spacing: 2px;
+      background: linear-gradient(135deg, #ffffff 30%, #e8eaf0 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: fadeIn 0.8s ease forwards;
+      text-transform: uppercase;
+      text-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    }
+
+    .logo span {
+      color: #22d3ee;
+      -webkit-text-fill-color: #22d3ee;
+    }
+    
+    .tagline { 
+      font-size: 0.8rem; 
+      color: #8b91a1;
+      margin-top: 6px; 
+      font-weight: 500;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      opacity: 0;
+      animation: fadeIn 0.8s ease 0.3s forwards;
+    }
+    
+    /* Progress bar container and animated line */
+    .progress-container {
+      width: 260px; 
+      height: 4px; 
+      background: rgba(34, 39, 50, 0.6);
+      border-radius: 999px; 
+      margin-top: 36px; 
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      position: relative;
+      z-index: 2;
+    }
+    
+    .progress-fill {
+      height: 100%; 
+      width: 0%; 
+      background: linear-gradient(90deg, #3b82f6 0%, #22d3ee 100%);
+      border-radius: 999px;
+      box-shadow: 0 0 8px rgba(34, 211, 238, 0.5);
+      animation: load 2.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    }
+    
+    /* Fixed bottom credit line with watermark style */
+    .dev-credit {
+      position: absolute; 
+      bottom: 20px;
+      font-size: 0.68rem; 
+      color: #545b6e;
+      letter-spacing: 0.8px;
+      z-index: 2;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dev-credit strong {
+      color: #8b91a1;
+      font-weight: 600;
+    }
+
+    .bullet {
+      color: #3b82f6;
+      font-size: 10px;
+    }
+    
+    /* Elegant Keyframes for Animations */
+    @keyframes fadeIn { 
+      from { 
+        opacity: 0; 
+        transform: translateY(6px); 
+      } 
+      to { 
+        opacity: 1; 
+        transform: translateY(0); 
+      } 
+    }
+
+    @keyframes bounceIn {
+      0% {
+        opacity: 0;
+        transform: scale(0.3);
+      }
+      50% {
+        opacity: 0.9;
+        transform: scale(1.1);
+      }
+      80% {
+        transform: scale(0.9);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+    
+    @keyframes load { 
+      0% { 
+        width: 0%; 
+      } 
+      10% {
+        width: 15%;
+      }
+      35% {
+        width: 45%;
+      }
+      60% {
+        width: 72%;
+      }
+      85% {
+        width: 88%;
+      }
+      100% { 
+        width: 100%; 
+      } 
+    }
+  </style>
+</head>
+<body>
+  <div class="glow"></div>
+  
+  <div class="branding-box">
+    <!-- Beautiful visual symbol representing SPEEDSPED -->
+    <div class="logo-symbol">
+      <div class="logo-symbol-inner">S</div>
+    </div>
+    
+    <div class="logo">SPEED<span>SPED</span></div>
+    <div class="tagline">Gerador Automatizado de Arquivos</div>
+  </div>
+  
+  <div class="progress-container">
+    <div class="progress-fill"></div>
+  </div>
+  
+  <div class="dev-credit">
+    Desenvolvido por <strong>SiteGenTech</strong> <span class="bullet">•</span> v1.0.0
+  </div>
+</body>
+</html>

@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SPEEDSPED — Centro Operacional</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- Titlebar -->
+    <div class="custom-titlebar">
+      <div class="titlebar-drag-region"></div>
+      <div class="titlebar-title">SPEEDSPED — Centro Operacional</div>
+      <div class="window-controls">
+        <button id="btn-window-min" class="window-btn" title="Minimizar"><svg width="12" height="12" viewBox="0 0 12 12"><path fill="currentColor" d="M1 5.5h10v1H1z"/></svg></button>
+        <button id="btn-window-max" class="window-btn" title="Maximizar"><svg width="12" height="12" viewBox="0 0 12 12"><path fill="currentColor" d="M1.5 1.5v9h9v-9h-9zm1 1h7v7h-7v-7z"/></svg></button>
+        <button id="btn-window-close" class="window-btn window-close-btn" title="Fechar"><svg width="12" height="12" viewBox="0 0 12 12"><path fill="currentColor" d="M1.4 1.4l9.2 9.2-.7.7-9.2-9.2z"/><path fill="currentColor" d="M10.6 1.4l-9.2 9.2-.7-.7 9.2-9.2z"/></svg></button>
+      </div>
+    </div>
+
+    <div class="app-body">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="logo-container">
+            <div class="logo-svg-wrapper">
+              <svg viewBox="0 0 100 100" width="30" height="30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="lightningGrad" x1="20" y1="0" x2="80" y2="100" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#ffffff"/><stop offset="60%" stop-color="#e2e8f0"/><stop offset="100%" stop-color="#94a3b8"/>
+                  </linearGradient>
+                </defs>
+                <path d="M58 8 L32 50 L48 50 L28 92 L72 44 L52 44 L68 8 Z" fill="#202432" transform="translate(1.5,1.5)"/>
+                <path d="M58 8 L32 50 L48 50 L28 92 L72 44 L52 44 L68 8 Z" fill="url(#lightningGrad)"/>
+              </svg>
+            </div>
+            <div class="logo-text">
+              <h2>SPEED<span>SPED</span></h2>
+              <p>SiteGenTech</p>
+            </div>
+          </div>
+        </div>
+
+        <nav class="nav-menu">
+          <div class="nav-section-label">Entregas</div>
+          <button class="nav-btn active" data-target="history">
+            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Arquivos SPED
+            <span class="badge" id="badge-history-ready" style="display:none;">0</span>
+          </button>
+          <button class="nav-btn" data-target="fila">
+            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="16" width="12" height="4" rx="1"/></svg>
+            Fila SPED
+            <span class="badge" id="badge-fila-count" style="display:none;">0</span>
+          </button>
+
+          <div class="nav-section-label">Operação</div>
+          <button class="nav-btn" data-target="dashboard">
+            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+            Painel Geral
+          </button>
+          <button class="nav-btn" data-target="pipeline">
+            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2"/><circle cx="5" cy="18" r="2"/><path d="M7 6h8a4 4 0 0 1 0 8H9a4 4 0 0 0 0 8h8"/></svg>
+            Status do Pipeline
+            <span class="badge-pulse" id="badge-pipeline-active" style="display:none;"></span>
+          </button>
+          <button class="nav-btn" data-target="bancos">
+            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+            Bancos de Dados
+            <span class="badge" id="badge-bancos-count" style="display:none;">0</span>
+          </button>
+
+          <div class="nav-section-label">Administração</div>
+          <button class="nav-btn" data-target="remoto">
+            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            Acesso Remoto
+          </button>
+          <button class="nav-btn" data-target="logs">
+            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+            Log do Sistema
+          </button>
+          <button class="nav-btn" data-target="diag">
+            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            Diagnóstico
+          </button>
+          <button class="nav-btn" data-target="settings">
+            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Configurações
+          </button>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="status-indicator-box">
+            <div class="status-indicator online" id="global-status-dot"></div>
+            <span id="global-status-text">Conectado</span>
+          </div>
+          <p class="version-tag" id="sidebar-version">SPEEDSPED v3.0.0</p>
+        </div>
+      </aside>
+
+      <!-- Content -->
+      <main class="content-area">
+        <header class="top-bar">
+          <div class="page-title-box">
+            <h1 id="active-page-title">Arquivos SPED</h1>
+            <p id="active-page-subtitle">Encontre o cliente e baixe o arquivo fiscal — pronto para o PVA.</p>
+          </div>
+          <div class="top-bar-actions">
+            <span class="live-clock" id="live-clock">--:--:--</span>
+            <button class="btn btn-ghost" id="btn-sync" title="Forçar sincronização">
+              <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              Sincronizar
+            </button>
+          </div>
+        </header>
+
+        <div class="view-container">
+
+          <!-- Path alert -->
+          <div class="alert-box hidden" id="path-warning-alert">
+            <div class="alert-icon"><svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+            <div class="alert-content">
+              <h3>Caminho de dados inválido ou não configurado</h3>
+              <p>Não foi possível acessar <strong id="alert-configured-path">C:\ACS_Exporta</strong>. Abra Configurações e aponte a pasta de rede do servidor.</p>
+            </div>
+            <button class="btn btn-ghost" id="btn-go-to-settings">Configurar</button>
+          </div>
+
+          <!-- ============================ PAINEL GERAL (NOC) ============================ -->
+          <section id="view-dashboard" class="content-view" data-screen-label="Painel Geral">
+            <div class="status-strip">
+              <div class="op-tile hero s-ok" id="tile-system">
+                <span class="op-rail"></span>
+                <span class="op-label"><span class="op-dot ok" id="tile-system-dot"></span> Status do Sistema</span>
+                <span class="op-value" id="tile-system-value">Operacional</span>
+                <span class="op-sub" id="tile-system-sub">Ciclo #-- · daemon ativo</span>
+              </div>
+              <div class="op-tile" id="tile-current">
+                <span class="op-label">Empresa Atual</span>
+                <span class="op-value" id="tile-current-value" style="font-size:16px;">—</span>
+                <span class="op-sub" id="tile-current-sub">Nenhuma geração ativa</span>
+              </div>
+              <div class="op-tile" id="tile-queue">
+                <span class="op-label">Fila Pendente</span>
+                <span class="op-value" id="tile-queue-value">0</span>
+                <span class="op-sub">empresas aguardando</span>
+              </div>
+              <div class="op-tile" id="tile-fails">
+                <span class="op-label">Falhas (24h)</span>
+                <span class="op-value" id="tile-fails-value">0</span>
+                <span class="op-sub" id="tile-fails-sub">nenhum erro recente</span>
+              </div>
+            </div>
+
+            <div class="noc-grid" style="margin-top:16px;">
+              <div class="noc-main">
+                <!-- Pipeline visual -->
+                <div class="panel pipeline-board">
+                  <div class="pb-head">
+                    <span class="section-title">Pipeline de Processamento</span>
+                    <span class="pb-current"><span class="op-dot run" style="width:8px;height:8px;"></span> Etapa ativa: <strong id="pb-active-stage">—</strong></span>
+                  </div>
+                  <div class="flow" id="pipeline-flow"><!-- nodes injected --></div>
+
+                  <div class="active-task idle" id="active-task">
+                    <div class="at-row">
+                      <div class="at-avatar" id="at-avatar">?</div>
+                      <div class="at-info">
+                        <h4 id="at-name">Aguardando início do ciclo</h4>
+                        <p id="at-stage">Nenhuma atividade ativa</p>
+                      </div>
+                      <div class="at-pct" id="at-pct">0%</div>
+                    </div>
+                    <div class="progress-track"><div class="progress-fill" id="at-fill" style="width:0%;"></div></div>
+                    <div class="at-meta">
+                      <span>Início: <span id="at-start">—</span></span>
+                      <span id="at-eta">—</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Health -->
+              <div class="panel panel-pad health-panel">
+                <div class="section-head"><span class="section-title">Saúde do Sistema</span></div>
+                <div class="health-list" id="health-list"><!-- rows injected --></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============================ STATUS DO PIPELINE ============================ -->
+          <section id="view-pipeline" class="content-view" data-screen-label="Status do Pipeline">
+            <div class="panel">
+              <div class="toolbar">
+                <div class="toolbar-left"><h2>Fluxo de Processamento por Empresa</h2></div>
+                <div class="toolbar-right">
+                  <input type="text" id="pipeline-search-input" class="search-input" placeholder="Filtrar empresa…">
+                </div>
+              </div>
+              <div class="grid-scroll">
+                <table class="dgrid">
+                  <thead><tr>
+                    <th>Empresa</th><th>Etapa Atual</th><th style="width:200px;">Progresso</th>
+                    <th>Tempo</th><th>Status</th><th>Última Atualização</th>
+                  </tr></thead>
+                  <tbody id="pipeline-table-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============================ FILA SPED ============================ -->
+          <section id="view-fila" class="content-view" data-screen-label="Fila SPED">
+            <div class="fila-layout">
+              <!-- Operational board -->
+              <div class="fila-ops">
+                <div class="ops-card">
+                  <div class="section-head"><span class="section-title"><span class="op-dot run" id="fila-exec-dot" style="width:7px;height:7px;display:none;"></span> Em Execução</span></div>
+                  <div id="fila-execucao-container"></div>
+                </div>
+                <div class="ops-card">
+                  <div class="section-head"><span class="section-title">Preparando <span class="count-chip" id="fila-prep-count">0</span></span></div>
+                  <div id="fila-preparacao-container" class="queue-list"></div>
+                </div>
+                <div class="ops-card">
+                  <div class="section-head"><span class="section-title">Aguardando <span class="count-chip" id="fila-espera-count">0</span></span></div>
+                  <div id="fila-espera-container" class="queue-list"></div>
+                </div>
+                <div class="ops-card">
+                  <div class="section-head"><span class="section-title">Falhas Recentes <span class="count-chip" id="fila-erros-count">0</span></span></div>
+                  <div id="fila-erros-container" class="queue-list"></div>
+                </div>
+              </div>
+
+              <!-- Companies table -->
+              <div class="panel">
+                <div class="toolbar">
+                  <div class="toolbar-left"><h2>Empresas</h2><span class="cell-sub mono" id="fila-info-text">—</span></div>
+                  <div class="toolbar-right">
+                    <input type="text" id="fila-search-input" class="search-input" placeholder="Buscar empresa…">
+                    <select id="fila-filter-status" class="select-ui">
+                      <option value="all">Todos os status</option>
+                      <option value="liberada">Liberadas</option>
+                      <option value="gerada">Geradas</option>
+                      <option value="em_processo">Em processo</option>
+                      <option value="erro">Com erro</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="grid-scroll">
+                  <table class="dgrid">
+                    <thead><tr>
+                      <th>Cliente</th><th>Banco</th><th>Responsável</th><th>Liberação</th><th>Status</th><th>Última Geração</th><th class="actions-col">Ações</th>
+                    </tr></thead>
+                    <tbody id="fila-table-body"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============================ BANCOS DE DADOS ============================ -->
+          <section id="view-bancos" class="content-view" data-screen-label="Bancos de Dados">
+            <div class="panel" style="margin-bottom:14px;">
+              <div class="toolbar">
+                <div class="toolbar-left"><h2>Teste de Conexão — PostgreSQL</h2></div>
+                <div class="toolbar-right"><button class="btn btn-ghost" id="btn-conn-test"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> Testar Conexão</button></div>
+              </div>
+              <div class="panel-pad conn-test" id="conn-test-result">
+                <div class="diag-item" style="border:none;background:transparent;padding:0;"><div class="dk">Status</div><div class="dv" id="conn-status">Não testado</div></div>
+                <div class="diag-item" style="border:none;background:transparent;padding:0;"><div class="dk">Tempo de resposta</div><div class="dv" id="conn-time">—</div></div>
+                <div class="diag-item" style="border:none;background:transparent;padding:0;"><div class="dk">Última conexão</div><div class="dv" id="conn-last">—</div></div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="toolbar">
+                <div class="toolbar-left"><h2>Bancos Restaurados</h2><span class="cell-sub mono" id="bancos-info-text">—</span></div>
+                <div class="toolbar-right"><input type="text" id="bancos-search-input" class="search-input" placeholder="Filtrar banco…"></div>
+              </div>
+              <div class="grid-scroll">
+                <table class="dgrid">
+                  <thead><tr>
+                    <th>Banco</th><th>Cliente</th><th class="num">Tamanho</th><th>Último Backup</th><th>Último Restore</th><th>Status</th><th>Integridade</th><th class="actions-col"></th>
+                  </tr></thead>
+                  <tbody id="bancos-table-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============================ ARQUIVOS SPED ============================ -->
+          <section id="view-history" class="content-view active" data-screen-label="Arquivos SPED">
+            <!-- Delivery hero: encontrar + baixar -->
+            <div class="delivery-hero">
+              <div class="dh-mark">
+                <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M58 8 L32 50 L48 50 L28 92 L72 44 L52 44 L68 8 Z" fill="currentColor"/></svg>
+              </div>
+              <div class="dh-search">
+                <svg class="dh-search-ic" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="history-search-input" class="dh-input" placeholder="Buscar cliente para baixar o SPED…" autocomplete="off" spellcheck="false">
+                <kbd class="dh-kbd" id="history-result-count">—</kbd>
+              </div>
+              <div class="dh-stats">
+                <div class="stat-chip ok"><span class="sc-dot"></span><span class="sc-num" id="kpi-hoje">0</span><span class="sc-lab">Prontos hoje</span></div>
+                <div class="stat-chip warn"><span class="sc-dot"></span><span class="sc-num" id="kpi-pendente">0</span><span class="sc-lab">Pendentes</span></div>
+                <div class="stat-chip fail"><span class="sc-dot"></span><span class="sc-num" id="kpi-erro">0</span><span class="sc-lab">Com erro</span></div>
+              </div>
+            </div>
+
+            <!-- linha de controle enxuta -->
+            <div class="dh-controls">
+              <div class="dh-quick" id="history-quick">
+                <button class="quick-chip active" data-periodo="all">Todos</button>
+                <button class="quick-chip" data-periodo="hoje">Hoje</button>
+                <button class="quick-chip" data-periodo="7d">7 dias</button>
+                <button class="quick-chip" data-periodo="30d">30 dias</button>
+              </div>
+              <div class="dh-controls-right">
+                <button class="btn btn-ghost" id="btn-toggle-filters"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg> Filtros</button>
+                <button class="btn btn-ghost" id="btn-download-all-sped"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Baixar todos</button>
+              </div>
+            </div>
+
+            <!-- filtros avançados (recolhidos) -->
+            <div class="filter-drawer hidden" id="history-filters">
+              <select id="history-filter-periodo" class="select-ui hidden"><option value="all">Qualquer período</option><option value="hoje">Hoje</option><option value="7d">Últimos 7 dias</option><option value="30d">Últimos 30 dias</option></select>
+              <div class="ff"><label>Responsável</label><select id="history-filter-resp" class="select-ui"><option value="all">Todos</option></select></div>
+              <div class="ff"><label>Tipo</label><select id="history-filter-tipo" class="select-ui"><option value="all">Todos</option><option value="Fiscal">Fiscal</option><option value="Contribuições">Contribuições</option></select></div>
+              <div class="ff"><label>Status</label><select id="history-filter-status" class="select-ui"><option value="all">Todos</option><option value="concluido">Concluídos</option><option value="erro">Com erro</option></select></div>
+              <div class="ff"><label>&nbsp;</label><button class="btn btn-ghost" id="btn-export-csv">Exportar CSV</button></div>
+            </div>
+
+            <div class="panel" style="margin-top:14px;">
+              <div class="grid-scroll">
+                <table class="dgrid">
+                  <thead><tr>
+                    <th>Cliente</th><th>Responsável</th><th>Tipo</th><th>Data de Geração</th><th>Status</th><th class="num">Tamanho</th><th>Último Download</th><th class="actions-col">Ações</th>
+                  </tr></thead>
+                  <tbody id="history-table-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============================ LOG DO SISTEMA ============================ -->
+          <section id="view-logs" class="content-view" data-screen-label="Log do Sistema">
+            <div class="panel" style="display:flex;flex-direction:column;">
+              <div class="toolbar">
+                <div class="toolbar-left">
+                  <div class="tabs">
+                    <button class="tab active" data-tab="op"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> Operacional</button>
+                    <button class="tab" data-tab="tech"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg> Técnica</button>
+                  </div>
+                </div>
+                <div class="toolbar-right">
+                  <input type="text" id="log-search-input" class="search-input" placeholder="Buscar no log…">
+                  <select id="log-filter-level" class="select-ui"><option value="ALL">Todos níveis</option><option value="INFO">INFO</option><option value="WARNING">WARNING</option><option value="ERROR">ERROR</option></select>
+                </div>
+              </div>
+
+              <div class="panel-pad">
+                <div class="tab-panel active" id="tab-op">
+                  <div class="grid-scroll">
+                    <table class="dgrid">
+                      <thead><tr><th style="width:160px;">Horário</th><th>Empresa</th><th>Evento</th><th>Resultado</th></tr></thead>
+                      <tbody id="log-op-body"></tbody>
+                    </table>
+                  </div>
+                  <p class="field-hint" style="margin-top:12px;">Política de retenção ativa: logs operacionais mantidos por <strong id="log-retention-days">3</strong> dias, arquivamento e limpeza automáticos. Ajuste em Configurações › Logs.</p>
+                </div>
+                <div class="tab-panel" id="tab-tech">
+                  <div class="terminal" id="log-terminal-content"><div class="text-muted">Carregando logs…</div></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============================ ACESSO REMOTO ============================ -->
+          <section id="view-remoto" class="content-view" data-screen-label="Acesso Remoto">
+            <div class="panel">
+              <div class="toolbar">
+                <div class="toolbar-left"><h2>Conexões Remotas — ACS Gerente</h2></div>
+                <div class="toolbar-right"><input type="text" id="remoto-search-input" class="search-input" placeholder="Filtrar cliente ou banco…"></div>
+              </div>
+              <div class="grid-scroll">
+                <table class="dgrid">
+                  <thead><tr><th>Cliente</th><th>Banco</th><th>Caminho</th><th class="actions-col">Ações</th></tr></thead>
+                  <tbody id="remoto-table-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============================ DIAGNÓSTICO ============================ -->
+          <section id="view-diag" class="content-view" data-screen-label="Diagnóstico">
+            <div class="section-head"><span class="section-title">Informações Técnicas do Servidor</span></div>
+            <div class="diag-grid">
+              <div class="diag-item"><div class="dk">Endereço IP</div><div class="dv" id="diag-ip">—</div></div>
+              <div class="diag-item"><div class="dk">Hostname</div><div class="dv" id="diag-hostname">—</div></div>
+              <div class="diag-item"><div class="dk">Espaço em disco (C:)</div><div class="dv" id="diag-disk">—</div><div class="disk-bar" style="margin-top:8px;"><span id="diag-disk-bar" style="width:0%;"></span></div></div>
+              <div class="diag-item"><div class="dk">Caminho de dados</div><div class="dv" id="diag-path" style="font-size:11px;word-break:break-all;">—</div></div>
+              <div class="diag-item"><div class="dk">Daemon</div><div class="dv" id="diag-daemon">—</div></div>
+              <div class="diag-item"><div class="dk">Último ciclo</div><div class="dv" id="diag-cycle">—</div></div>
+            </div>
+
+            <div class="section-head" style="margin-top:20px;"><span class="section-title">Conectividade</span></div>
+            <div class="diag-grid">
+              <div class="diag-item"><div class="dk">PostgreSQL</div><div class="dv"><span class="badge-status ok">Online</span></div></div>
+              <div class="diag-item"><div class="dk">Supabase</div><div class="dv"><span class="badge-status ok">Conectado</span></div></div>
+              <div class="diag-item"><div class="dk">Rede / Share</div><div class="dv"><span class="badge-status ok" id="diag-net">Acessível</span></div></div>
+            </div>
+          </section>
+
+          <!-- ============================ CONFIGURAÇÕES ============================ -->
+          <section id="view-settings" class="content-view" data-screen-label="Configurações">
+            <div class="settings-wrap">
+              <!-- Geral -->
+              <div class="setting-block">
+                <h2><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6"/></svg> Geral</h2>
+                <p class="desc">Servidor PostgreSQL e pasta de sincronização acessada pelo painel.</p>
+                <div class="form-group">
+                  <label for="settings-path-input">Pasta compartilhada (local ou rede)</label>
+                  <input type="text" id="settings-path-input" class="input-ui" placeholder="Ex: \\SERVIDOR\ACS_Exporta">
+                  <p class="field-hint">Aponte para o compartilhamento do servidor onde o daemon grava os arquivos de progresso. Ex.: <code>\\192.168.1.100\ACS_Exporta</code></p>
+                </div>
+                <div class="form-group">
+                  <label for="settings-server-ip">IP do servidor PostgreSQL</label>
+                  <input type="text" id="settings-server-ip" class="input-ui" placeholder="192.168.1.100" style="max-width:260px;">
+                </div>
+                <div class="row-end"><button class="btn btn-primary" id="btn-save-settings">Salvar configuração</button></div>
+              </div>
+
+              <!-- Atualizações -->
+              <div class="setting-block">
+                <h2><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg> Atualizações Automáticas</h2>
+                <p class="desc">Distribuição contínua via GitHub Actions. Os clientes recebem novas versões automaticamente.</p>
+                <div class="update-card">
+                  <div class="update-ic"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+                  <div style="flex:1;">
+                    <div style="font-size:13px;font-weight:600;color:var(--text-primary);">Versão 3.0.0 — atualizada</div>
+                    <div class="cell-sub">Última verificação: <span id="update-last-check">há 2 horas</span> · nenhuma atualização pendente</div>
+                  </div>
+                  <button class="btn btn-ghost" id="btn-check-update">Verificar agora</button>
+                </div>
+                <div class="cicd-flow">
+                  <div class="cicd-step"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg> GitHub Actions</div>
+                  <span class="cicd-arrow">→</span>
+                  <div class="cicd-step">Build Electron</div>
+                  <span class="cicd-arrow">→</span>
+                  <div class="cicd-step">Release</div>
+                  <span class="cicd-arrow">→</span>
+                  <div class="cicd-step">Auto-update clientes</div>
+                </div>
+              </div>
+
+              <!-- Logs -->
+              <div class="setting-block">
+                <h2><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg> Logs &amp; Retenção</h2>
+                <p class="desc">Controle de retenção, arquivamento e limpeza automática.</p>
+                <div class="form-group">
+                  <label for="settings-retention">Manter logs ativos por (dias)</label>
+                  <input type="number" id="settings-retention" class="input-ui" value="3" min="1" max="90" style="max-width:120px;">
+                </div>
+                <div class="toggle-row"><div><div class="t-label">Arquivamento automático</div><div class="t-sub">Compacta logs antigos antes de remover</div></div><label class="switch"><input type="checkbox" id="settings-archive" checked><span class="slider"></span></label></div>
+                <div class="toggle-row"><div><div class="t-label">Limpeza automática</div><div class="t-sub">Remove logs além do período de retenção</div></div><label class="switch"><input type="checkbox" id="settings-cleanup" checked><span class="slider"></span></label></div>
+              </div>
+
+              <!-- Notificações -->
+              <div class="setting-block">
+                <h2><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> Notificações</h2>
+                <p class="desc">Alertas nativos do Windows para eventos do pipeline.</p>
+                <div class="toggle-row"><div><div class="t-label">Falhas de geração</div><div class="t-sub">Avisar quando uma empresa falhar</div></div><label class="switch"><input type="checkbox" id="settings-notify-fail" checked><span class="slider"></span></label></div>
+                <div class="toggle-row"><div><div class="t-label">Conclusão com sucesso</div><div class="t-sub">Avisar a cada SPED gerado</div></div><label class="switch"><input type="checkbox" id="settings-notifications-enable" checked><span class="slider"></span></label></div>
+                <div class="toggle-row"><div><div class="t-label">Ciclo concluído</div><div class="t-sub">Avisar ao final de cada ciclo completo</div></div><label class="switch"><input type="checkbox" id="settings-notify-cycle"><span class="slider"></span></label></div>
+              </div>
+            </div>
+          </section>
+
+        </div>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+          <div class="footer-left">
+            <div class="footer-item"><span class="f-dot" id="footer-status-dot"></span> <strong id="footer-status">Operacional</strong></div>
+            <div class="footer-item">Última sincronização: <strong id="footer-sync-time">—</strong></div>
+          </div>
+          <div class="footer-right">
+            <span id="footer-version">SPEEDSPED v3.0.0</span>
+          </div>
+        </footer>
+      </main>
+    </div>
+  </div>
+
+  <!-- Drawer (pipeline detail) -->
+  <div class="drawer-backdrop" id="drawer-backdrop"></div>
+  <aside class="drawer" id="detail-drawer">
+    <div class="drawer-head">
+      <div>
+        <h3 id="drawer-title">—</h3>
+        <div class="d-sub" id="drawer-sub">—</div>
+      </div>
+      <button class="drawer-close" id="drawer-close">&times;</button>
+    </div>
+    <div class="drawer-body">
+      <div class="drawer-meta" id="drawer-meta"></div>
+      <div class="section-head"><span class="section-title">Linha do Tempo</span></div>
+      <div class="timeline" id="drawer-timeline"></div>
+    </div>
+  </aside>
+
+  <!-- Context menu -->
+  <div class="ctx-menu" id="ctx-menu"></div>
+
+  <!-- Confirm modal -->
+  <div class="modal-backdrop" id="confirm-modal">
+    <div class="modal">
+      <div class="modal-head"><h3 id="confirm-modal-title">Confirmar ação</h3><button class="drawer-close" id="btn-close-confirm">&times;</button></div>
+      <div class="modal-body"><p id="confirm-modal-message"></p><div class="modal-warn hidden" id="confirm-modal-warning"></div></div>
+      <div class="modal-foot"><button class="btn btn-ghost" id="btn-confirm-cancel">Cancelar</button><button class="btn btn-primary" id="btn-confirm-ok">Confirmar</button></div>
+    </div>
+  </div>
+
+  <!-- INI modal -->
+  <div class="modal-backdrop" id="ini-modal">
+    <div class="modal wide">
+      <div class="modal-head"><h3>Gerar INI — <span id="ini-modal-banco">—</span></h3><button class="drawer-close" id="btn-close-ini">&times;</button></div>
+      <div class="modal-body">
+        <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+          <div class="form-group" style="flex:1;margin:0;"><label>IP do servidor</label><input type="text" id="ini-ip-input" class="input-ui" value="localhost"></div>
+          <div class="form-group" style="width:120px;margin:0;"><label>Porta</label><input type="text" id="ini-porta-input" class="input-ui" value="5432"></div>
+        </div>
+        <textarea id="ini-preview-content" class="ini-preview-textarea" readonly></textarea>
+        <select id="ini-banco-select" class="hidden"></select>
+        <input type="text" id="ini-banco-search" class="hidden">
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" id="btn-salvar-ini">Salvar como…</button>
+        <button class="btn btn-primary" id="btn-copiar-ini">Copiar INI</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast-ui"><span id="toast-icon"></span><span id="toast-message"></span></div>
+
+  <script src="mock-data.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>

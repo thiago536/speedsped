@@ -1,0 +1,22 @@
+============================================================
+              SPEEDSPED - SiteGenTech
+              TELA: FILA DE BACKUPS
+============================================================
+
+Esta tela gerencia e monitora os downloads e uploads das copias de seguranca (backups) 
+das bases de dados que sao utilizadas como materia-prima para a restauracao e posterior 
+geracao do SPED fiscal.
+
+COMPONENTES E FUNCIONALIDADES PRINCIPAIS:
+-----------------------------------------
+1. Banner de Status Geral: 
+   Informa se a fila de transferencias do servidor esta rodando no momento, em pausa ou 
+   aguardando o agendamento noturno.
+
+2. Grade de Backups (Cards de Processo): 
+   Cards dinamicos exibem o progresso de cada arquivo de banco (.backup ou .sql) que esta 
+   sendo baixado do servidor de origem para o banco PostgreSQL de restauracao.
+
+3. Telemetria de Transferencia: 
+   Mostra o tamanho total do arquivo de backup em megabytes, a velocidade atual de 
+   copia/download e uma estimativa de tempo restante (ETA) para a conclusao do processo.

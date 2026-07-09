@@ -1,0 +1,152 @@
+============================================================================
+ O ERRO "NAT INCOMPATIVEL" DO ACS GERENTE — EXPLICACAO COMPLETA
+ (investigado e resolvido em 07/07/2026 — correção automática já em produção)
+============================================================================
+
+
+----------------------------------------------------------------------------
+ PARTE 1 — EXPLICACAO PARA LEIGO (sem tecniques)
+----------------------------------------------------------------------------
+
+Imagine que o banco de dados de cada posto é um CADERNO e o programa ACS
+Gerente é o PROFESSOR que lê esse caderno.
+
+Cada vez que a ACS lança uma versão nova do programa, ela às vezes muda o
+"jeito de escrever" no caderno: adiciona uma página nova, aumenta o espaço
+de uma coluna, cria um campo novo. Cada mudança dessas é anotada no final
+do caderno, numa lista de "reformas feitas".
+
+O professor (o programa), antes de começar a aula, conta quantas reformas
+o caderno tem:
+
+  - Se o caderno tem AS MESMAS reformas que ele conhece → tudo certo, abre.
+  - Se o caderno tem MAIS reformas do que ele conhece → ele se recusa a
+    ler, com medo de não entender as páginas novas. É aí que aparece o
+    aviso "Versão (NAT) do Banco Sintese incompatível!".
+
+O QUE ACONTECEU NO NOSSO CASO:
+
+O posto JOAO PEDRO atualizou o programa ACS lá no posto dele (dia 02/07).
+Essa versão mais nova fez 3 reformas no caderno do posto. Quando o nosso
+servidor baixou esse caderno para gerar o SPED, o NOSSO programa (que é uma
+versão um pouco mais antiga) contou as reformas, viu que tinha 3 a mais do
+que ele conhece, e se recusou a abrir.
+
+Ou seja: NÃO era defeito, NÃO era arquivo corrompido. Era só o posto usando
+uma versão do programa mais nova que a nossa.
+
+A SOLUCAO:
+
+Como trabalhamos sempre numa CÓPIA do caderno (o banco original fica
+intocado no servidor), o robô agora simplesmente "arranca" as anotações das
+reformas que o nosso programa não conhece antes de abrir. As 3 reformas em
+questão eram inofensivas (só aumentavam o espaço de algumas colunas), então
+o programa antigo lê o caderno normalmente sem elas. Isso acontece sozinho,
+em toda geração, sem ninguém precisar fazer nada.
+
+DETALHE IMPORTANTE que confundiu a investigação: no mesmo dia havia um
+SEGUNDO problema, sem relação — o programa estava travando com um erro
+"Runtime error 217" em QUALQUER posto, até nos que sempre funcionaram. Esse
+era um problema da máquina (memória/estado do Windows) e foi resolvido
+reiniciando o servidor. Ele estava "na frente" do erro NAT e escondia o
+aviso verdadeiro. Se esse "Runtime error 217" voltar algum dia: reiniciar a
+máquina primeiro, antes de mexer em qualquer banco.
+
+
+----------------------------------------------------------------------------
+ PARTE 2 — EXPLICACAO TECNICA
+----------------------------------------------------------------------------
+
+2.1. O QUE E O "NAT"
+--------------------
+NAT é o número de versão do SCHEMA do banco Sintese (estrutura de tabelas),
+independente da versão do executável. Cada build do gerente.exe embute:
+
+  - a lista de migrações de schema que ele sabe aplicar/entender;
+  - o NAT máximo compatível (build 720 → NAT 279).
+
+Correspondência observada nos nossos 40 bancos:
+  build 671 → NAT 259 | build 685 → 265 | build 720 → 279
+  build 728 → NAT 282 | build 737 → 285
+
+2.2. ONDE O NAT REALMENTE MORA (a descoberta-chave)
+---------------------------------------------------
+O NAT que o Gerente valida NÃO é o campo `versao.nat`. E o
+**count(*) da tabela `atualizacoes`** — o log de migrações aplicadas ao
+schema (colunas: id GUID, versao, build_atual, data_hora, id_cartao
+"SD-nnnn", descricao...). Cada linha = uma migração executada.
+
+No startup, o gerente.exe:
+  1. conta as linhas de `atualizacoes`;
+  2. REESCREVE `versao.nat` com esse count (por isso `UPDATE versao SET
+     nat=279` não resolvia — o valor voltava para 282 sozinho);
+  3. compara com o NAT compatível do executável:
+       count == NAT do exe  → abre normal;
+       count <  NAT do exe  → aplica as migrações que faltam (upgrade);
+       count >  NAT do exe  → dialog "Atenção" (#32770):
+           "Versão (NAT) do Banco Sintese incompativel!
+            Versão do sistema: 6.3287.6.720
+            NAT compativel: 279 / NAT do Banco: 282"
+         e não abre.
+
+2.3. POR QUE O ERRO APARECEU
+----------------------------
+Em 02/07/2026 18:01 o cliente JOAO PEDRO atualizou o Gerente local dele
+para o build 728. Esse exe aplicou 3 migrações no banco DO SERVIDOR REMOTO
+(que é compartilhado — é o mesmo banco que baixamos via pg_dump):
+
+  SD-1924 (build 728): envio automático da conciliação financeira (eConf)
+                       ao quitar faturas de convênio
+  SD-2062 (build 728): aumento do campo codigo da tabela de cartões
+  SD-2081 (build 728): aumento do campo codigo das tabelas de recebimento
+
+O banco passou a ter 282 linhas em `atualizacoes`. Nosso gerente.exe
+(build 720, NAT 279) recusa qualquer banco com count > 279.
+
+No pipeline o sintoma era mascarado duas vezes:
+  a) o DIALOGS_FECHAR do acs_automation fechava o dialog "Atenção"
+     automaticamente → o log só dizia "ACS não abriu / tela de login não
+     apareceu (tentativa N/12)";
+  b) no dia da investigação havia ainda um crash ambiental "Runtime error
+     217 at 005B0593" (dialog 'Error', exit code 217) que derrubava o
+     Gerente em QUALQUER banco antes mesmo do check de NAT. Esse problema
+     era da máquina e sumiu com o reboot de 07/07. São dois problemas
+     independentes; o 217 escondia o dialog NAT verdadeiro.
+
+2.4. A CORRECAO EM PRODUCAO
+---------------------------
+`fix_nat_compatibilidade(nome_db)` em postgres_manager.py, chamado no
+bloco de fixes do main.py (etapa "corrigindo", antes dos demais fix_*):
+
+  1. count(*) em `atualizacoes`;
+  2. se count <= ACS_NAT_COMPATIVEL (.env, hoje 279): não faz nada;
+  3. se count > : DELETE das (count - 279) linhas MAIS RECENTES
+     (ORDER BY data_hora DESC) e UPDATE versao SET nat = 279;
+  4. guarda de segurança: só roda em bancos *_local / *_teste (cópias
+     descartáveis). O banco do servidor nunca é tocado — a cada novo
+     restore o fix reaplica.
+
+Por que é seguro: as migrações removidas são apenas o REGISTRO de que o
+schema mudou; as mudanças em si (colunas alargadas) permanecem no banco e
+são retrocompatíveis — um varchar maior é lido normalmente pelo exe antigo.
+Validado fim-a-fim em 07/07: joaopedro_teste recriado com NAT 282 → fix
+removeu SD-1924/2062/2081 → Gerente abriu na tela de login sem dialog.
+
+Bancos afetados conhecidos: joaopedro (282), sabugi (282), remigio (282),
+je (285 — build 737; o fix remove 6 linhas).
+
+2.5. MANUTENCAO FUTURA (leia isto ao atualizar o Gerente)
+---------------------------------------------------------
+- Ao atualizar o gerente.exe deste servidor, ajustar ACS_NAT_COMPATIVEL no
+  C:\SpedGenerator\.env para o NAT do exe novo (o próprio dialog de erro
+  informa o "NAT compativel" — ou compare com a tabela do item 2.1).
+- O fix descarta migrações que o nosso exe não conhece. Enquanto forem
+  alargamentos de coluna, sem risco. Se um dia uma migração criar tabela/
+  coluna que a geração SPED USA, o caminho certo é atualizar o Gerente do
+  servidor, não confiar no fix.
+- Diagnóstico manual: apontar o Caminho= do acsgerente.ini para o banco e
+  rodar `python C:\SpedGenerator\observar_startup_nat.py 60` — abre o
+  Gerente SEM fechar dialogs e loga tudo em observacao_nat.log.
+
+Referências: resultado_teste_nat.md (relatório do teste), CLAUDE.md §3
+(postgres_manager.py), config.py (ACS_NAT_COMPATIVEL).

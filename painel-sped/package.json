@@ -1,0 +1,49 @@
+{
+  "name": "painel-sped",
+  "version": "1.0.8",
+  "description": "Painel de Controle e Status do SpedGenerator",
+  "main": "main.js",
+  "author": "SiteGenTech <sitegentech@gmail.com>",
+  "homepage": "https://github.com/thiago536",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "build:win": "electron-builder --win"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9",
+    "electron-log": "^5.2.0"
+  },
+  "devDependencies": {
+    "electron": "^30.0.6",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.sitegentech.speedsped",
+    "productName": "SPEEDSPED",
+    "copyright": "© 2026 SiteGenTech",
+    "directories": {
+      "output": "build-dist"
+    },
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "license": "LICENSE.txt",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "SPEEDSPED"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "thiago536",
+      "repo": "painel-sped-releases",
+      "releaseType": "release"
+    }
+  }
+}

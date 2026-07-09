@@ -1,0 +1,27 @@
+============================================================
+              SPEEDSPED - SiteGenTech
+             TELA: BANCOS DE DADOS POSTGRESQL
+============================================================
+
+Esta tela fornece o monitoramento e gestao dos bancos de dados PostgreSQL restaurados 
+e ativos no servidor local. E essencial para validar se os dados das empresas estao 
+acessiveis para o modulo validador do SPED.
+
+COMPONENTES E FUNCIONALIDADES PRINCIPAIS:
+-----------------------------------------
+1. Grade de Bancos Restaurados: 
+   Apresenta em cards todas as bases locais do PostgreSQL ativas e configuradas no 
+   servidor, com filtros de busca rapidos.
+
+2. Sincronizacao com Servidor: 
+   Permite varrer o servidor PostgreSQL real para atualizar a lista local de esquemas de 
+   banco de dados com um clique.
+
+3. Telemetria das Instancias de Bancos: 
+   Exibe dados criticos das bases locais, como versao do PostgreSQL rodando, numero de 
+   conexoes ativas, tamanho fisico do banco de dados em disco e data/hora da ultima 
+   restauracao ou atualizacao bem-sucedida.
+
+4. Fila de Comandos de Banco de Dados: 
+   Painel de auditoria inferior que registra os comandos enviados a infraestrutura (como 
+   solicitacoes de restauracao ou delecao de base) e seus respectivos status de conclusao.

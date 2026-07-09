@@ -1,0 +1,4 @@
+[Resolução Base] 1366x768
+[Janela: C:\Windows\py.exe] Mouse: Clique Esquerdo em (298, 36) | Espera anterior: 1.43s
+[Janela: ACS Sintese - Gerente] Mouse: Clique Esquerdo em (345, 121) | Espera anterior: 0.92s
+[Janela: ACS Sintese - Gerente] Mouse: Clique Esquerdo em (741, 416) | Espera anterior: 1.16s

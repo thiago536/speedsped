@@ -1,0 +1,25 @@
+============================================================
+              SPEEDSPED - SiteGenTech
+             TELA: STATUS DO PIPELINE
+============================================================
+
+A tela de Status do Pipeline oferece uma visualizacao granular e em tempo real do fluxo 
+sequencial de processamento de cada empresa cadastrada no sistema. E ideal para rastrear 
+a evolucao de geracoes volumosas em lote.
+
+COMPONENTES E FUNCIONALIDADES PRINCIPAIS:
+-----------------------------------------
+1. Barra de Pesquisa: 
+   Filtra dinamicamente as empresas exibidas pelo nome ou CNPJ em tempo real, facilitando 
+   a busca por empresas especificas em listas extensas.
+
+2. Rastreamento em 4 Etapas: 
+   Cada empresa e representada por um card interativo com 4 checkpoints criticos:
+   - Download de Backup (pg_dump): Status da obtencao da base na origem.
+   - Restauracao do Banco: Status da criacao e importacao do banco PostgreSQL local.
+   - Geracao do SPED: Acompanhamento da execucao do validador fiscal do SPED.
+   - Upload/Sincronizacao: Status do salvamento do arquivo fiscal gerado na pasta final.
+
+3. Indicadores de Estado Coloridos: 
+   Utiliza cores Harmoniosas e estados (Aguardando, Em Progresso, Sucesso ou Erro) para 
+   indicar onde a execucao de cada empresa parou ou travou, eliminando a adivinhacao.

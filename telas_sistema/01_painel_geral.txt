@@ -1,0 +1,35 @@
+============================================================
+              SPEEDSPED - SiteGenTech
+           TELA: PAINEL GERAL (DASHBOARD)
+============================================================
+
+O Painel Geral e a central de controle e monitoramento em tempo real do SPEEDSPED. 
+Ele fornece um panorama analitico e consolidado de todo o processamento de automacao 
+fiscal em andamento na empresa.
+
+METRICAS E COMPONENTES PRINCIPAIS:
+----------------------------------
+1. Ciclo Atual: 
+   Identifica o numero do ciclo de execucao corrente da automacao em background (Daemon) 
+   e seu estado atual (Aguardando, Executando ou Concluido).
+
+2. Empresas Concluidas: 
+   Apresenta o total de empresas que concluiram com sucesso a geracao do SPED no ciclo 
+   corrente, comparado ao volume total de empresas integradas.
+
+3. Falhas / Erros: 
+   Indica o numero de falhas ou problemas detectados na geracao do lote fiscal, permitindo 
+   uma rapida intervencao do operador.
+
+4. Proximo Ciclo: 
+   Cronometro ou indicador com o horario previsto para o inicio da proxima varredura 
+   automatica de arquivos e bancos.
+
+5. Em Andamento Agora (Painel Esquerdo): 
+   Exibe detalhadamente a empresa que esta sendo processada no exato momento, o avatar 
+   dinamico da empresa, a etapa especifica em que ela esta e uma barra de progresso 
+   grafica em tempo real indicando a porcentagem de conclusao.
+
+6. Servico de Background (Daemon) (Painel Direito): 
+   Exibe dados de telemetria de saude do robot (Daemon), incluindo total de ciclos 
+   executados, resultado da ultima execucao e integridade do sistema local.

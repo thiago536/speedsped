@@ -1,0 +1,32 @@
+name: Build & Release SPEEDSPED
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Inject update token into main.js
+        run: |
+          $content = Get-Content main.js -Raw
+          $content = $content -replace '__UPDATE_TOKEN__', '${{ secrets.UPDATE_TOKEN }}'
+          Set-Content main.js $content -Encoding utf8
+        shell: pwsh
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build & publish release
+        run: npm run dist
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}

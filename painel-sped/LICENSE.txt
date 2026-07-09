@@ -1,0 +1,19 @@
+TERMOS DE USO E LICENÇA DE USUÁRIO FINAL (EULA)
+=================================================
+
+Plataforma: SPEEDSPED
+Desenvolvedor: SiteGenTech
+Website: sitegentch.vercel.app
+Ano: 2026
+
+Ao instalar e utilizar este software, você concorda com os seguintes termos:
+
+1. LICENÇA: A SiteGenTech concede a você uma licença não exclusiva, intransferível e limitada para utilizar a plataforma SPEEDSPED estritamente para suas atividades profissionais de conformidade fiscal e geração de arquivos SPED.
+
+2. PROPRIEDADE INTELECTUAL: Todos os direitos de propriedade intelectual relativos ao SPEEDSPED, incluindo códigos, layouts, logotipos, marcas e metodologias, pertencem exclusivamente à SiteGenTech.
+
+3. LIMITAÇÃO DE RESPONSABILIDADE: O software é fornecido "no estado em que se encontra" (AS IS), sem garantias de qualquer tipo de funcionamento ininterrupto. A SiteGenTech não se responsabiliza por prejuízos decorrentes de erros de preenchimento ou inconsistências nos arquivos gerados que sejam de responsabilidade tributária do usuário.
+
+4. ATUALIZAÇÕES: A SiteGenTech poderá realizar atualizações periódicas de conformidade legal e correções de segurança na plataforma.
+
+© 2026 SiteGenTech. Todos os direitos reservados.

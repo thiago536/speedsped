@@ -1,0 +1,52 @@
+===============================================================================
+INSTRUÇÕES DE CORREÇÃO E INICIALIZAÇÃO - SPEDGENERATOR NO SERVIDOR
+===============================================================================
+
+Se você é o agente Antigravity rodando no servidor ou o administrador do sistema:
+O sistema SpedGenerator NÃO está quebrado. Apenas duas falhas específicas aconteceram em sequência, o que impediu o funcionamento:
+
+1. CAUSA RAIZ DA FALHA DE GERAÇÃO (Ocorrida hoje à tarde):
+   O ACS Gerente crasheava silenciosamente logo após o recálculo de vendas. 
+   O log do ACS (AjustaEstrutura.txt) revelou o erro SQL:
+     "column 'p' of relation 'prestacao' does not exist"
+   Isso ocorre porque o PostgreSQL não aceita alias na cláusula SET de um UPDATE.
+   
+   *A CORREÇÃO JÁ APLICADA:*
+   Criamos uma correção em `postgres_manager.py` (método `fix_prestacao_update_alias`). 
+   Ele cria uma coluna fictícia "p" e um trigger BEFORE UPDATE no Postgres local para redirecionar e aceitar a query do ACS sem quebrar.
+
+2. CAUSA RAIZ DA PARADA DO SISTEMA (Ocorrida após a correção):
+   Ao tentar reiniciar o daemon do servidor, o script falhava com o erro:
+     "'python' não é reconhecido como um comando interno ou externo..."
+   Isso acontece porque o Agendador de Tarefas do Windows ou o prompt não-interativo não carregam a variável de ambiente PATH do usuário onde o Python está instalado (geralmente sob AppData).
+
+   *A CORREÇÃO JÁ APLICADA:*
+   Alteramos todos os scripts em lote (.bat) no diretório de desenvolvimento para buscar automaticamente o executável do Python nos caminhos de instalação mais comuns no Windows (AppData de usuários, Program Files, etc.).
+
+3. SOBRE OS "ARQUIVOS SEM SENTIDO":
+   Os arquivos JSON e .log na pasta `C:\ACS_Exporta` (como gerados.json, daemon_state.json, etc.) são essenciais para a comunicação por arquivos (IPC) entre o painel visual e o daemon de background. Não os apague, eles controlam a fila de postos.
+
+===============================================================================
+COMO RESTAURAR O SISTEMA AGORA (PASSOS NO SERVIDOR)
+===============================================================================
+
+Passo 1: Sincronizar e Iniciar
+Abra o prompt de comando (CMD) no servidor e execute:
+   C:\SpedGeneretor\atualizar_e_reiniciar.bat
+
+   Este script irá automaticamente:
+   - Sincronizar todos os arquivos de C:\SpedGeneretor (desenvolvimento) para C:\SpedGenerator (produção).
+   - Localizar o executável correto do Python no servidor.
+   - Parar qualquer processo orfão/travado do ACS Gerente ou Python.
+   - Iniciar o orquestrador main.py em background e o PainelSPED.
+
+Passo 2: Monitorar a Execução
+Verifique o arquivo C:\ACS_Exporta\daemon.log para garantir que o ciclo iniciou com sucesso.
+Como as empresas falharam 3 vezes hoje, o tracking as considerou temporariamente travadas. Se quiser forçar a reprocessar imediatamente:
+   - Abra o PainelSPED e enfileire o posto manualmente, ou
+   - Execute no CMD do servidor (pasta C:\SpedGenerator):
+     python main.py --limpar-tracking todos
+     atualizar_e_reiniciar.bat
+
+O sistema voltará a rodar 100% com o fix do banco de dados aplicado automaticamente após cada restauração.
+===============================================================================

@@ -1,0 +1,28 @@
+============================================================
+              SPEEDSPED - SiteGenTech
+                TELA: FILA SPED
+============================================================
+
+A Fila SPED exibe e gerencia todas as empresas ativas importadas diretamente da nuvem 
+(banco de dados do Supabase). E nesta tela que o operador realiza o controle ativo e 
+agendamento manual de tarefas.
+
+COMPONENTES E FUNCIONALIDADES PRINCIPAIS:
+-----------------------------------------
+1. Filtros Avancados: 
+   Permite buscar empresas pelo nome e filtrar o lote por seu status operacional atual 
+   (Ex: Liberadas, Geradas, Em Processo ou Com Erro).
+
+2. Cards de Empresas Ativas: 
+   Listagem estilizada mostrando os dados cadastrais (CNPJ, Razao Social, UF), a data 
+   do ultimo sincronismo e seu status de processamento fiscal.
+
+3. Acoes Manuais Direcionadas: 
+   Botoes rapidos nos cards permitem disparar comandos em lote ou individuais para o Daemon:
+   - Forcar a geracao imediata do SPED para uma empresa.
+   - Solicitar a restauracao manual do banco de dados correspondente.
+   - Reiniciar o fluxo da empresa no pipeline para recomecar o processamento.
+
+4. Fila Manual (Solicitacoes Pendentes): 
+   Painel inferior exibindo comandos e solicitacoes criados manualmente pelo operador que 
+   estao na fila de execucao imediata do robot.

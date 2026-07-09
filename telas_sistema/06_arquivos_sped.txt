@@ -1,0 +1,25 @@
+============================================================
+              SPEEDSPED - SiteGenTech
+               TELA: ARQUIVOS SPED
+============================================================
+
+A tela de Arquivos SPED funciona como a central de auditoria, historico e exportacao 
+de arquivos fiscais gerados pelo SPEEDSPED.
+
+COMPONENTES E FUNCIONALIDADES PRINCIPAIS:
+-----------------------------------------
+1. Historico de SPED Gerados: 
+   Tabela completa contendo informacoes sobre todas as geracoes de arquivos SPED 
+   concluidas com sucesso ou com falha.
+
+2. Busca e Filtro de Status: 
+   Filtros rapidos para encontrar geracoes por empresa ou separar os arquivos concluidos 
+   com exito daquelas geracoes que apresentaram inconsistencias.
+
+3. Acoes e Exportacoes de Relatorios:
+   - Baixar Todos: Consolida e exporta em lote todos os arquivos fiscais gerados para a 
+     maquina do operador.
+   - Exportar CSV: Gera uma planilha CSV detalhada com o historico gerencial de geracoes 
+     para fins de contabilidade e auditoria.
+   - Abrir Pasta: Atalho nativo para abrir a pasta fisica compartilhada (Ex: C:\ACS_Exporta) 
+     no Windows Explorer local com apenas um clique.

@@ -1,0 +1,44 @@
+# Environment variables and secrets
+.env
+.env*.local
+
+# Local Databases & Backups (Crucial!)
+Bancos/
+servidores.json
+bancos_nomes.json
+clientes_nuvem.txt
+clientes_supabase.txt
+
+# Logs
+*.log
+*.log.*
+spedgenerator.log*
+
+# Compiled python files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / build
+dist/
+build/
+*.spec
+
+# OS and local IDE settings
+.vscode/
+.idea/
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Agent files
+.agents/
+.claude/
+.gemini/
+
+# Portable Git binaries
+git/
+portablegit.exe
+
+# Temp screenshots
+teste_nat_shot*.png

@@ -1,0 +1,26 @@
+============================================================
+              SPEEDSPED - SiteGenTech
+                TELA: CONFIGURACOES
+============================================================
+
+A tela de Configuracoes centraliza a parametrizacao do caminho de compartilhamento de 
+dados local/rede e fornece instrucoes para a distribuicao facilitada da ferramenta.
+
+COMPONENTES E FUNCIONALIDADES PRINCIPAIS:
+-----------------------------------------
+1. Caminho do Compartilhamento de Rede: 
+   Define o diretorio no qual o painel cliente ira buscar os arquivos JSON e logs gerados 
+   pelo robot (Daemon) do servidor principal. 
+   - Suporta caminhos locais (Ex: C:\ACS_Exporta)
+   - Suporta caminhos UNC de rede compartilhada (Ex: \\192.168.1.100\ACS_Exporta)
+
+2. Validacao de Caminho em Tempo Real: 
+   Valida se a pasta informada esta online, com permissao de escrita e leitura e 
+   acessivel de forma instantanea.
+
+3. Guia Educativo de Compartilhamento da Interface: 
+   Apresenta instruções passo a passo de como a interface client do SPEEDSPED pode ser 
+   facilmente compartilhada e distribuida para outros computadores Windows da rede local:
+   - Geracao do instalador via script 'npm run dist'.
+   - Copia facil do executavel gerado (PainelSPED Setup 1.0.0.exe).
+   - Configuracao rapida de rede no cliente para conexao instantanea.

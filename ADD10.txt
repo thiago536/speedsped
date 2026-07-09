@@ -1,0 +1,56 @@
+Você vai trabalhar no projeto SPEEDSPED (Electron desktop). Quero implementar uma função nova na tela de Arquivos SPED: a coluna “Responsável”.
+
+Contexto:
+Hoje essa coluna mostra “?” porque o sistema ainda não faz a resolução do responsável de cada SPED. Já existe uma tabela no Supabase chamada public.empresas com os campos:
+- nome
+- nome_base
+- status
+- responsavel_atual
+- cnpj
+- data_liberacao
+- data_conclusao
+- enviada
+- progresso
+
+Objetivo:
+Implementar a lógica para descobrir e exibir o responsável correto de cada SPED na interface, usando os dados do Supabase e os dados já carregados pelo frontend.
+
+Regras:
+1. Primeiro, analise o código existente e descubra:
+   - onde a lista de Arquivos SPED é montada
+   - onde os dados do Supabase já são consultados
+   - quais campos cada item de SPED possui hoje
+   - como a tabela é renderizada no renderer.js
+
+2. Implementar uma estratégia de resolução do responsável com esta prioridade:
+   - Se existir responsavel_atual, usar esse valor
+   - Se responsavel_atual estiver nulo, tentar resolver pelo melhor identificador disponível no item do SPED, priorizando:
+     a) cnpj
+     b) nome_base
+     c) nome
+   - Se não for possível identificar com segurança, exibir “Sem responsável”
+
+3. O sistema não deve mais mostrar “?” como valor final fixo. “?” só pode aparecer temporariamente enquanto os dados ainda estão carregando, se isso fizer sentido no fluxo atual.
+
+4. Se o matching entre SPED e empresa do Supabase ficar ambíguo, não invente responsável. Nesse caso:
+   - manter “Sem responsável”
+   - registrar um aviso no console
+   - deixar o código preparado para melhoria futura
+
+5. Quero que você crie a lógica de forma limpa:
+   - preferir uma função utilitária separada para resolver o responsável
+   - evitar duplicação de código
+   - manter compatibilidade com o resto da tela
+   - não quebrar a tabela atual
+
+6. Se necessário, faça pequenas melhorias de estrutura no frontend para suportar essa resolução, mas sem reescrever a tela inteira.
+
+7. Se houver chance de melhorar a confiabilidade do matching, explique no final quais chaves foram usadas e por quê.
+
+Resultado esperado:
+- A coluna Responsável passa a mostrar o responsável correto quando houver dados suficientes
+- Quando não for possível determinar, mostra “Sem responsável”
+- O comportamento atual com “?” deixa de ser o estado final padrão
+- O código fica organizado e fácil de evoluir depois
+
+Antes de alterar, mostre rapidamente quais arquivos e funções você identificou como centrais para essa mudança. Depois implemente.

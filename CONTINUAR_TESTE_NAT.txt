@@ -1,0 +1,90 @@
+LEIA ISTO PARA CONTINUAR O TESTE DO ERRO NAT (sessão anterior: 2026-07-07, interrompida para reboot do PC)
+============================================================================================================
+
+Você (Claude) estava no meio do teste descrito em C:\SpedGenerator\CONTEXTO_TESTE_NAT_SERVIDOR.txt.
+O usuário desligou/religou o PC para descartar causa ambiental. Continue de onde parou.
+Há também uma memória persistente: project_teste_nat_andamento.md (mesmo conteúdo, resumido).
+
+--------------------------------------------------------------------------------------------
+1. O QUE JÁ FOI DESCOBERTO (não repita)
+--------------------------------------------------------------------------------------------
+a) Só existe UMA instalação do Gerente neste servidor: C:\ACSSoft\Sintese\Gerente SPED
+   (Gerente 6.720). As pastas Gerente, Gerente_669, Gerente Plasvam, Gerentea, GerenteDM,
+   Gerente659 NÃO existem. O passo 5 do plano (testar outros exes) é IMPOSSÍVEL aqui.
+
+b) Varredura de versao (SELECT numero,tipo_banco,build,nat FROM versao) nos 40 bancos _local:
+   - Maioria: 3287 | G | 720 | 279  → geram normalmente
+   - joaopedro_local, sabugi_local: 720 | 282  → FALHARAM em 07/07 ("ACS não abriu 12x")
+   - remigio_local: 728 | 282
+   - je_local: 737 | 285  → falhou 7x, abriu na 8ª tentativa e gerou SPED válido em 06/07
+   - b2, saomarcos, milagres, jr, h7conv, redepazlucas: 671 | 259; zabele: 121 | 259
+   - Padrão: nat acompanha o build do exe (671→259, 685→265, 720→279, 728→282, 737→285)
+
+c) O "Erro NAT" NÃO aparece como erro nos logs: o DIALOGS_FECHAR (acs_automation) fecha o
+   dialog e o sintoma vira "ACS não abriu / tela de login não apareceu (tentativa N/12)".
+
+d) TEXTO REAL DO ERRO (capturado com observar_startup_nat.py, sem fecha-dialogs):
+   Dialog título 'Error' (classe #32770), texto: "Runtime error 217 at 005B0593"
+   gerente.exe morre sozinho com exit code 217 ~15s depois. Sempre o MESMO endereço.
+
+e) NÍVEL 1 DO PLANO FALHOU: em joaopedro_teste (cópia de joaopedro_local), rodou-se
+   UPDATE versao SET nat = 279 WHERE codigo = 1  → versao ficou IDÊNTICA aos bancos bons
+   (3287/G/720/279) e o crash 217 CONTINUOU. Logo a causa NÃO é (só) versao.nat.
+
+f) SUSPEITA AMBIENTAL (motivo do reboot): na hora do teste, até POSTO SAO MARCOS
+   (saomarcos_local, 671/259, banco ANTIGO) falhava 12x com o mesmo dialog 'Error'.
+   Porém CRED DEDA (720/279) gerou OK às 10:41 e SANTA CRUZ às 09:18 do mesmo dia,
+   entrelaçado com as falhas de SABUGI/JOAO PEDRO. A correlação com nat existe mas
+   não fecha 100% — pode haver duas causas misturadas.
+
+--------------------------------------------------------------------------------------------
+2. ESTADO DEIXADO NA MÁQUINA (verifique ao voltar)
+--------------------------------------------------------------------------------------------
+- Daemon ficou PAUSADO via comando (C:\ACS_Exporta\controle.json = "pausado", 11:06).
+  Se o usuário rodou iniciar_sistema.bat após o reboot, confira o controle.json.
+  NÃO retome antes de terminar os testes de GUI; ao final, retome (comando "retomar").
+- Banco joaopedro_teste existe no Postgres local (cópia de joaopedro_local),
+  atualmente com nat=279 (ALTERADO — o original era 282). Dropar quando o teste acabar.
+- acsgerente.ini (C:\ACSSoft\Sintese\Gerente SPED\) ficou apontando Caminho=joaopedro_teste.
+  O pipeline reescreve sozinho na próxima geração — sem risco, mas lembre disso nos testes.
+- Script pronto: C:\SpedGenerator\observar_startup_nat.py
+  Uso: python observar_startup_nat.py [segundos]
+  Lança o gerente.exe SEM fecha-dialogs, loga janelas novas + texto dos filhos em
+  C:\SpedGenerator\observacao_nat.log e salva screenshots teste_nat_shotN.png.
+  (Para trocar o banco alvo, edite o Caminho= no acsgerente.ini antes — o script não faz isso.)
+- Python: "C:\Users\SERVIDOR SPED\AppData\Local\Python\pythoncore-3.14-64\python.exe"
+- psql: "C:\Program Files\PostgreSQL\15\bin\psql.exe" -h localhost -U postgres (senha 123)
+- Comandos em C:\ACS_Exporta\comandos\*.json PRECISAM de "status": "pendente" para
+  serem consumidos pelo command_processor.
+
+--------------------------------------------------------------------------------------------
+3. PRÓXIMOS PASSOS (na ordem)
+--------------------------------------------------------------------------------------------
+PASSO 1 — Controle pós-reboot: aponte o acsgerente.ini para creddeda_local (banco BOM,
+  gerou OK às 10:41 de 07/07) e rode observar_startup_nat.py 60.
+  - Se TAMBÉM der Runtime error 217 → o problema é ambiental/instalação, não o banco.
+    Investigar o ambiente (o reboot pode ter resolvido; retestar).
+  - Se abrir normal → siga ao passo 2.
+
+PASSO 2 — Rebaseline: volte joaopedro_teste ao original
+  (UPDATE versao SET nat = 282 WHERE codigo = 1), aponte o ini para joaopedro_teste e
+  rode observar_startup_nat.py 60. Confirme que o 217 acontece COM nat=282 pós-reboot.
+
+PASSO 3 — Nível 1 de novo: UPDATE versao SET nat = 279 → teste de novo.
+  (Antes do reboot isso NÃO resolveu; confirmar se continua não resolvendo.)
+
+PASSO 4 — Se nat não resolver mesmo com ambiente limpo, a diferença está em outro lugar
+  do banco joaopedro. Ideias: comparar schema/dados de config entre joaopedro_teste e
+  creddeda_local (o crash é determinístico no mesmo endereço → provavelmente o Gerente
+  lê alguma tabela de config no startup e quebra num dado específico).
+
+PASSO 5 — Só depois de identificar a causa confirmada: implementar
+  fix_versao_compatibilidade() (ou o fix que corresponder à causa real) em
+  postgres_manager.py, padrão dos outros fix_*, chamado nos 2 pontos do main.py;
+  constante no .env. Documentar tudo em resultado_teste_nat.md.
+
+LIMPEZA FINAL: dropar joaopedro_teste, retomar o daemon (comando "retomar"),
+  apagar os teste_nat_shot*.png se não forem mais úteis.
+
+REGRAS: nunca UPDATE/DELETE/DROP em bancos *_local reais — só em cópias *_teste.
+  Abrir o Gerente (leitura) contra banco real é permitido — produção faz isso.
