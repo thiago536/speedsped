@@ -603,7 +603,8 @@ def _run_pipeline(empresas: list[dict]):
                 arquivos = executar_acs_e_gerar_sped(nome, nome_base=nome_base,
                                                       informacoes_sped=info_sped, exe_path=exe_path,
                                                       steps_ja_gerados=steps_ja_gerados,
-                                                      modo_override=modo_override)
+                                                      modo_override=modo_override,
+                                                      cnpj_supabase=(empresa.get("cnpj") or ""))
             except AcsNaoAbriuError:
                 raise  # tratado abaixo: adia o posto (ou erro real no retorno final)
             except Exception as e:

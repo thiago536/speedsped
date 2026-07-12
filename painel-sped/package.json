@@ -1,6 +1,6 @@
 {
   "name": "painel-sped",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Painel de Controle e Status do SpedGenerator",
   "main": "main.js",
   "author": "SiteGenTech <sitegentech@gmail.com>",

@@ -183,6 +183,7 @@ const VIEW_META = {
   fila: ['Fila SPED', 'Execução, preparação e fila de geração.'],
   bancos: ['Bancos de Dados', 'Bancos PostgreSQL restaurados no servidor.'],
   history: ['Arquivos SPED', 'Central de entregas dos arquivos fiscais.'],
+  liberacao: ['Liberação', 'Acompanhamento das liberações dos clientes — somente consulta.'],
   logs: ['Log do Sistema', 'Visão operacional e técnica em tempo real.'],
   remoto: ['Acesso Remoto', 'Conexões e geração de INI para o ACS Gerente.'],
   diag: ['Diagnóstico', 'Informações técnicas e conectividade do servidor.'],
@@ -197,6 +198,7 @@ function switchView(viewId) {
   $('active-page-subtitle').textContent = meta[1];
   if (viewId === 'remoto') renderRemotoTable();
   if (viewId === 'diag') renderDiagnostico();
+  if (viewId === 'liberacao') renderLiberacao();
 }
 window.switchView = switchView;
 
@@ -233,9 +235,13 @@ document.addEventListener('DOMContentLoaded', () => {
   $('fila-filter-status').addEventListener('change', renderFila);
   $('bancos-search-input').addEventListener('input', renderBancosTable);
   $('remoto-search-input').addEventListener('input', renderRemotoTable);
-  ['history-search-input', 'history-filter-periodo', 'history-filter-resp', 'history-filter-tipo', 'history-filter-status'].forEach((id) => {
+  ['history-search-input', 'history-filter-periodo', 'history-filter-resp', 'history-filter-status'].forEach((id) => {
     $(id).addEventListener('input', renderHistoryTable);
     $(id).addEventListener('change', renderHistoryTable);
+  });
+  ['lib-search-input', 'lib-filter-status', 'lib-filter-resp'].forEach((id) => {
+    $(id).addEventListener('input', renderLiberacao);
+    $(id).addEventListener('change', renderLiberacao);
   });
   $('log-search-input').addEventListener('input', renderLogsTech);
   $('log-filter-level').addEventListener('change', renderLogsTech);
@@ -252,6 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // history buttons
   $('btn-download-all-sped').addEventListener('click', downloadAllSped);
+  $('btn-send-outlook').addEventListener('click', sendViaOutlook);
   $('btn-export-csv').addEventListener('click', exportCsv);
 
   // history: quick período chips + filtros avançados + autofoco da busca
@@ -426,6 +433,7 @@ async function syncData() {
       renderBancosTable();
       renderFila();
       renderHistoryTable();
+      renderLiberacao();
       renderLogsOperational();
       syncCommands();
       $('footer-sync-time').textContent = new Date().toLocaleTimeString('pt-BR');
@@ -899,10 +907,12 @@ function buildHistoryItems() {
 function renderHistoryTable() {
   const body = $('history-table-body');
   const items = buildHistoryItems();
-  // popula o filtro de responsável (reconstrói a cada render, preservando a seleção
-  // atual) — evita ficar preso a uma lista antiga quando os dados mudam.
+  // popula o filtro de responsável a partir das empresas "Em Processo" do
+  // Supabase (reconstrói a cada render, preservando a seleção atual) — assim
+  // o filtro acompanha automaticamente as mudanças na base.
   const respSel = $('history-filter-resp');
-  const resps = [...new Set(items.map((i) => i.responsavel).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  const emProcesso = ((cachedEmpresasFila && cachedEmpresasFila.empresas) || []).filter((e) => e.status === 'em_processo');
+  const resps = [...new Set(emProcesso.map(_respDaEmpresa).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
   const respPrev = respSel.value;
   respSel.innerHTML = '<option value="all">Todos</option>' + resps.map((r) => `<option value="${escapeHTML(r)}">${escapeHTML(r)}</option>`).join('');
   respSel.value = [...respSel.options].some((o) => o.value === respPrev) ? respPrev : 'all';
@@ -918,11 +928,10 @@ function renderHistoryTable() {
 
   // filters
   const search = $('history-search-input').value.toLowerCase().trim();
-  const per = $('history-filter-periodo').value, rf = $('history-filter-resp').value, tf = $('history-filter-tipo').value, st = $('history-filter-status').value;
+  const per = $('history-filter-periodo').value, rf = $('history-filter-resp').value, st = $('history-filter-status').value;
   let rows = items;
   if (search) rows = rows.filter((i) => i.nome.toLowerCase().includes(search));
   if (rf !== 'all') rows = rows.filter((i) => i.responsavel === rf);
-  if (tf !== 'all') rows = rows.filter((i) => i.tipo === tf);
   if (st === 'concluido') rows = rows.filter((i) => i.status !== 'erro');
   else if (st === 'erro') rows = rows.filter((i) => i.status === 'erro');
   if (per !== 'all') {
@@ -967,6 +976,21 @@ async function downloadFolder(folderPath) {
 }
 window.downloadFolder = downloadFolder;
 
+const OUTLOOK_SPED_RECIPIENT = 'fabiola.amaral@e-prosys.com';
+
+async function sendViaOutlook() {
+  const btn = $('btn-send-outlook');
+  btn.disabled = true;
+  try {
+    const res = await window.electronAPI.sendViaOutlook(currentPath, OUTLOOK_SPED_RECIPIENT);
+    if (res.canceled) return; // usuário cancelou a seleção — nenhuma ação
+    if (res.success) showToast(`Rascunho aberto no Outlook: "${res.subject}" com ${res.fileCount} anexo(s). Revise e clique em Enviar.`, 'ok');
+    else showToast(res.error || 'Não foi possível abrir o Outlook.', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 async function downloadAllSped() {
   const res = await window.electronAPI.selectFolder();
   if (!res.success) return;
@@ -986,6 +1010,75 @@ async function exportCsv() {
   const res = await window.electronAPI.saveFile(csv, 'sped_arquivos.csv', [{ name: 'CSV', extensions: ['csv'] }]);
   if (res.success) showToast('CSV exportado: ' + res.path, 'ok');
   else if (!res.canceled) showToast('Erro ao exportar CSV.', 'error');
+}
+
+/* ============================================================ Liberação (somente leitura) */
+const LIB_STATUS_INFO = {
+  liberada: { cls: 'warn', label: 'Liberada' },
+  em_processo: { cls: 'run', label: 'Em Processo' },
+  gerada: { cls: 'ok', label: 'Gerada' },
+  nao_liberada: { cls: 'idle', label: 'Não Liberada' },
+};
+
+function renderLiberacao() {
+  const body = $('liberacao-table-body');
+  if (!body) return;
+  const empresas = (cachedEmpresasFila && cachedEmpresasFila.empresas) || [];
+
+  // KPIs
+  const porStatus = (s) => empresas.filter((e) => e.status === s).length;
+  $('lib-kpi-liberadas').textContent = porStatus('liberada');
+  $('lib-kpi-processo').textContent = porStatus('em_processo');
+  $('lib-kpi-geradas').textContent = porStatus('gerada');
+  $('lib-kpi-nao').textContent = porStatus('nao_liberada');
+  const navBadge = $('badge-liberacao-count');
+  const ativos = porStatus('liberada') + porStatus('em_processo');
+  if (navBadge) { if (ativos > 0) { navBadge.style.display = 'inline-block'; navBadge.textContent = ativos; } else navBadge.style.display = 'none'; }
+
+  // filtro de responsável dinâmico (preserva a seleção atual)
+  const respSel = $('lib-filter-resp');
+  const resps = [...new Set(empresas.map(_respDaEmpresa).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  const respPrev = respSel.value;
+  respSel.innerHTML = '<option value="all">Todos responsáveis</option>' + resps.map((r) => `<option value="${escapeHTML(r)}">${escapeHTML(r)}</option>`).join('');
+  respSel.value = [...respSel.options].some((o) => o.value === respPrev) ? respPrev : 'all';
+
+  // filtros
+  const search = $('lib-search-input').value.toLowerCase().trim();
+  const st = $('lib-filter-status').value, rf = respSel.value;
+  let rows = empresas;
+  if (search) rows = rows.filter((e) => (e.nome || '').toLowerCase().includes(search) || (e.nome_base || '').toLowerCase().includes(search));
+  if (st !== 'all') rows = rows.filter((e) => e.status === st);
+  if (rf !== 'all') rows = rows.filter((e) => _respDaEmpresa(e) === rf);
+
+  // ordena: em processo primeiro, depois liberadas, depois o resto; dentro do grupo, liberação mais recente primeiro
+  const ordem = { em_processo: 0, liberada: 1, gerada: 2, nao_liberada: 3 };
+  rows = [...rows].sort((a, b) => {
+    const d = (ordem[a.status] ?? 9) - (ordem[b.status] ?? 9);
+    if (d !== 0) return d;
+    return new Date(b.data_liberacao || 0) - new Date(a.data_liberacao || 0);
+  });
+
+  $('lib-result-count').textContent = `${rows.length} empresa${rows.length === 1 ? '' : 's'}`;
+  if (cachedEmpresasFila && cachedEmpresasFila.ultima_atualizacao) $('lib-last-sync').textContent = fmtDate(cachedEmpresasFila.ultima_atualizacao);
+
+  if (!rows.length) { body.innerHTML = emptyRow(9, 'Nenhuma empresa encontrada', 'Ajuste a busca ou os filtros.'); return; }
+
+  body.innerHTML = rows.map((e) => {
+    const si = LIB_STATUS_INFO[e.status] || { cls: 'idle', label: e.status || '—' };
+    const resp = _respDaEmpresa(e);
+    const enviada = e.enviada ? badge('ok', 'Sim') + (e.data_envio ? ` <span class="cell-mono">${fmtDay(e.data_envio)}</span>` : '') : badge('idle', 'Não');
+    return `<tr>
+      <td class="cell-primary">${escapeHTML(e.nome || '—')}</td>
+      <td class="cell-mono">${escapeHTML(e.cnpj || '—')}</td>
+      <td>${resp ? `<span class="resp-chip"><span class="resp-avatar">${initials(resp)}</span>${escapeHTML(resp)}</span>` : '—'}</td>
+      <td>${badge(si.cls, si.label)}</td>
+      <td>${escapeHTML(e.progresso || '—')}</td>
+      <td class="cell-mono">${fmtDate(e.data_liberacao)}</td>
+      <td class="cell-mono">${fmtDate(e.data_conclusao)}</td>
+      <td>${enviada}</td>
+      <td>${escapeHTML(e.informacoes_sped || '—')}</td>
+    </tr>`;
+  }).join('');
 }
 
 /* ============================================================ Logs */

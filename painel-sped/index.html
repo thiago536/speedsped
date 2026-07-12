@@ -58,6 +58,11 @@
             Fila SPED
             <span class="badge" id="badge-fila-count" style="display:none;">0</span>
           </button>
+          <button class="nav-btn" data-target="liberacao">
+            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            Liberação
+            <span class="badge" id="badge-liberacao-count" style="display:none;">0</span>
+          </button>
 
           <div class="nav-section-label">Operação</div>
           <button class="nav-btn" data-target="dashboard">
@@ -323,6 +328,7 @@
               </div>
               <div class="dh-controls-right">
                 <button class="btn btn-ghost" id="btn-toggle-filters"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg> Filtros</button>
+                <button class="btn btn-ghost" id="btn-send-outlook"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> Enviar via Outlook</button>
                 <button class="btn btn-ghost" id="btn-download-all-sped"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Baixar todos</button>
               </div>
             </div>
@@ -331,7 +337,6 @@
             <div class="filter-drawer hidden" id="history-filters">
               <select id="history-filter-periodo" class="select-ui hidden"><option value="all">Qualquer período</option><option value="hoje">Hoje</option><option value="7d">Últimos 7 dias</option><option value="30d">Últimos 30 dias</option></select>
               <div class="ff"><label>Responsável</label><select id="history-filter-resp" class="select-ui"><option value="all">Todos</option></select></div>
-              <div class="ff"><label>Tipo</label><select id="history-filter-tipo" class="select-ui"><option value="all">Todos</option><option value="Fiscal">Fiscal</option><option value="Contribuições">Contribuições</option></select></div>
               <div class="ff"><label>Status</label><select id="history-filter-status" class="select-ui"><option value="all">Todos</option><option value="concluido">Concluídos</option><option value="erro">Com erro</option></select></div>
               <div class="ff"><label>&nbsp;</label><button class="btn btn-ghost" id="btn-export-csv">Exportar CSV</button></div>
             </div>
@@ -344,6 +349,46 @@
                   </tr></thead>
                   <tbody id="history-table-body"></tbody>
                 </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============================ LIBERAÇÃO (somente leitura) ============================ -->
+          <section id="view-liberacao" class="content-view" data-screen-label="Liberação">
+            <div class="dh-stats" style="margin-bottom:14px;">
+              <div class="stat-chip warn"><span class="sc-dot"></span><span class="sc-num" id="lib-kpi-liberadas">0</span><span class="sc-lab">Liberadas</span></div>
+              <div class="stat-chip ok"><span class="sc-dot"></span><span class="sc-num" id="lib-kpi-processo">0</span><span class="sc-lab">Em processo</span></div>
+              <div class="stat-chip ok"><span class="sc-dot"></span><span class="sc-num" id="lib-kpi-geradas">0</span><span class="sc-lab">Geradas</span></div>
+              <div class="stat-chip fail"><span class="sc-dot"></span><span class="sc-num" id="lib-kpi-nao">0</span><span class="sc-lab">Não liberadas</span></div>
+            </div>
+
+            <div class="panel" style="display:flex;flex-direction:column;">
+              <div class="toolbar">
+                <div class="toolbar-left">
+                  <input type="text" id="lib-search-input" class="search-input" placeholder="Buscar cliente ou posto…">
+                </div>
+                <div class="toolbar-right">
+                  <select id="lib-filter-status" class="select-ui">
+                    <option value="all">Todos os status</option>
+                    <option value="liberada">Liberada</option>
+                    <option value="em_processo">Em Processo</option>
+                    <option value="gerada">Gerada</option>
+                    <option value="nao_liberada">Não Liberada</option>
+                  </select>
+                  <select id="lib-filter-resp" class="select-ui"><option value="all">Todos responsáveis</option></select>
+                  <span class="badge-status idle" id="lib-result-count">0 empresas</span>
+                </div>
+              </div>
+              <div class="grid-scroll">
+                <table class="dgrid">
+                  <thead><tr>
+                    <th>Cliente / Posto</th><th>CNPJ</th><th>Responsável</th><th>Status</th><th>Situação</th><th>Liberação</th><th>Conclusão</th><th>Enviada</th><th>Informações SPED</th>
+                  </tr></thead>
+                  <tbody id="liberacao-table-body"></tbody>
+                </table>
+              </div>
+              <div class="panel-pad" style="padding-top:8px;">
+                <p class="field-hint">Tela somente de consulta — os dados vêm do Supabase e são atualizados automaticamente. Última sincronização: <span id="lib-last-sync">—</span></p>
               </div>
             </div>
           </section>

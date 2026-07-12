@@ -99,6 +99,20 @@ def _desconectar_sessoes(nome_db: str):
         pass
 
 
+def desativar_autovacuum(nome_db: str):
+    """Desativa autovacuum na base local para evitar conexoes bloqueantes do postgres."""
+    psql = os.path.join(PG_BIN_DIR, "psql.exe")
+    cmd = [
+        psql, "-h", PG_HOST, "-p", str(PG_PORT), "-U", PG_USER,
+        "-c", f"ALTER DATABASE \"{nome_db}\" SET autovacuum = off;"
+    ]
+    try:
+        subprocess.run(cmd, env=_pg_env, capture_output=True, text=True, timeout=10)
+        logger.info(f"Autovacuum desativado para o banco '{nome_db}'")
+    except Exception as e:
+        logger.warning(f"Nao foi possivel desativar autovacuum para '{nome_db}': {e}")
+
+
 def criar_banco(nome_db: str) -> bool:
     """Cria banco PostgreSQL local se nao existir."""
     with _ddl_lock:
@@ -115,7 +129,10 @@ def criar_banco(nome_db: str) -> bool:
             "-U", PG_USER,
             nome_db,
         ]
-        return _run(cmd, f"createdb '{nome_db}'")
+        ret = _run(cmd, f"createdb '{nome_db}'")
+        if ret:
+            desativar_autovacuum(nome_db)
+        return ret
 
 
 def restaurar_backup(nome_db: str, backup_path: str) -> bool:
@@ -204,8 +221,12 @@ def dropar_banco(nome_db: str) -> bool:
 def fix_saldo_mes_inventario(nome_db: str) -> bool:
     """
     Insere registro fim-do-mês-anterior em saldo_mes para TODAS empresas e estoques.
-    ACS valida existência do registro antes de gerar SPED.
-    Cruza empresa×estoque da tabela estoques, insere com produto dummy e valores zero.
+    ACS valida existência do registro antes de gerar SPED ("Os saldos dos
+    diversos do final do mês ainda não foram registrados!").
+    Cruza empresa×estoque da tabela estoques, insere com um produto EXISTENTE
+    (min(codigo) de produtos — o dummy fixo '00000000000001' violava a FK
+    ref_produto_saldo_mes em bancos sem esse código, caso daserra 2026-07-11,
+    e abortava o fix inteiro) e valores zero.
     ON CONFLICT DO NOTHING — seguro rodar múltiplas vezes.
     """
     try:
@@ -223,7 +244,7 @@ def fix_saldo_mes_inventario(nome_db: str) -> bool:
                 v_data DATE := date_trunc('month', CURRENT_DATE) - INTERVAL '1 day';
             BEGIN
                 INSERT INTO saldo_mes (cod_empresa, data, cod_estoque, cod_produto, saldo, custo, custo_medio, preco)
-                SELECT e.cod_empresa, v_data, e.codigo, '00000000000001', 0, 0, 0, 0
+                SELECT e.cod_empresa, v_data, e.codigo, (SELECT min(codigo) FROM produtos), 0, 0, 0, 0
                 FROM estoques e
                 WHERE NOT EXISTS (
                     SELECT 1 FROM saldo_mes sm
@@ -551,12 +572,17 @@ _INLINE_ABBREV = {
 }
 
 
-def descobrir_nome_empresa(nome_db: str, nome_empresa_supabase: str) -> str | None:
+def descobrir_nome_empresa(nome_db: str, nome_empresa_supabase: str,
+                           cnpj_supabase: str = "") -> str | None:
     """
     Conecta no banco local restaurado e retorna nome_fantasia real da empresa
     que corresponde ao nome do Supabase. Usado pra selecionar no combo do login ACS.
 
     Estrategias (em ordem de confianca):
+      0. CNPJ (deterministico): compara so os digitos do cnpj do Supabase com a
+         coluna cnpj da tabela empresa — nome fantasia interno pode ser
+         completamente diferente do Supabase (ex.: MANANCIAL BEBIDAS =
+         'CONVENIENCIA ALIANCA BQ' no banco alianca)
       1. Match exato
       2. Prefixo: local eh prefixo do Supabase (ex: "POSTO DM VIII" ~ "POSTO DM VIII (SOUZA)")
       3. Containment: local contido no Supabase (ex: "DM POCINHOS" em "POSTO DM POCINHOS")
@@ -577,17 +603,30 @@ def descobrir_nome_empresa(nome_db: str, nome_empresa_supabase: str) -> str | No
         )
         cur = conn.cursor()
         cur.execute("""
-            SELECT codigo, nome_fantasia
+            SELECT codigo, nome_fantasia, cnpj
             FROM empresa
             ORDER BY codigo ASC
         """)
-        rows = cur.fetchall()
+        rows_full = cur.fetchall()
         cur.close()
         conn.close()
+
+        rows = [(codigo, nome_fant) for codigo, nome_fant, _ in rows_full]
 
         if not rows:
             logger.error(f"Tabela empresa vazia em '{nome_db}'")
             return None
+
+        # --- 0. Match por CNPJ (deterministico — vence qualquer heuristica de nome) ---
+        cnpj_alvo = re.sub(r"\D", "", cnpj_supabase or "")
+        if len(cnpj_alvo) == 14:
+            for codigo, nome_fant, cnpj_row in rows_full:
+                if re.sub(r"\D", "", cnpj_row or "") == cnpj_alvo:
+                    logger.info(f"Match CNPJ: '{nome_empresa_supabase}' ({cnpj_alvo}) = "
+                                f"'{nome_fant}' (codigo={codigo})")
+                    return (nome_fant or "").strip()
+            logger.warning(f"CNPJ {cnpj_alvo} de '{nome_empresa_supabase}' nao encontrado na "
+                           f"tabela empresa de '{nome_db}' — caindo para match por nome")
 
         from mapping_config import obter_empresa_mapeada
         nome_empresa_mapeada = obter_empresa_mapeada(nome_empresa_supabase)

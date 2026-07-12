@@ -114,7 +114,8 @@ def exportar_empresas_fila():
 
         resp = get_client().table("empresas").select(
             "id, nome, nome_base, status, informacoes_sped, anotacoes, data_liberacao, "
-            "responsavel_atual, cnpj"
+            "responsavel_atual, cnpj, armazenamento, enviada, progresso, data_envio, "
+            "data_conclusao, email_contador, updated_at, created_at"
         ).order("nome").execute()
         empresas = resp.data or []
         gerados = listar_gerados()
@@ -134,6 +135,13 @@ def exportar_empresas_fila():
                 "responsavel_atual": e.get("responsavel_atual") or "",
                 "responsavel": e.get("responsavel_atual") or "",
                 "cnpj": e.get("cnpj") or "",
+                "armazenamento": e.get("armazenamento") or "",
+                "enviada": bool(e.get("enviada")),
+                "progresso": e.get("progresso") or "",
+                "data_envio": e.get("data_envio") or "",
+                "data_conclusao": e.get("data_conclusao") or "",
+                "email_contador": e.get("email_contador") or "",
+                "updated_at": e.get("updated_at") or "",
                 "gerado_local": bool(reg),
                 "data_geracao": reg.get("data_geracao", "") if reg else "",
                 "erro_local": reg.get("status") == "erro" if reg else False,

@@ -27,6 +27,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   selectFolder: () => ipcRenderer.invoke('select-folder'),
   listSubfolders: (configPath) => ipcRenderer.invoke('list-subfolders', configPath),
 
+  // --- Envio via Outlook ---
+  sendViaOutlook: (basePath, recipient) => ipcRenderer.invoke('send-outlook-email', { basePath, recipient }),
+
   // --- Sistema extra ---
   getSystemInfo: () => ipcRenderer.invoke('get-system-info'),
   saveFile: (content, defaultName, filters) => ipcRenderer.invoke('save-file-dialog', { content, defaultName, filters }),

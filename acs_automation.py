@@ -540,7 +540,10 @@ def _acs_esta_ativo() -> bool:
                     
                 p = _acs_processos_cache[pid]
                 cpu = p.cpu_percent()
-                if cpu > 2.0:
+                # Dynamic threshold: on a 28-core system, 1 core is 3.57% CPU.
+                # 80.0 / core_count gives a threshold of ~2.8% on a 28-core system.
+                threshold = 80.0 / (psutil.cpu_count() or 4)
+                if cpu > threshold:
                     return True
                 # Checa delta I/O — ACS pode estar escrevendo arquivo sem CPU alta
                 try:
@@ -557,7 +560,65 @@ def _acs_esta_ativo() -> bool:
     return False
 
 
-def _aguardar_geracao_e_fechar(titulo_sped: str, timeout=180) -> bool:
+def verificar_registro_9999(caminho_arquivo: str) -> bool:
+    """Verifica se o arquivo existe, tem tamanho razoável e termina com o registro |9999|."""
+    if not os.path.exists(caminho_arquivo):
+        return False
+    try:
+        if os.path.getsize(caminho_arquivo) < 50:
+            return False
+            
+        with open(caminho_arquivo, "r", encoding="utf-8", errors="ignore") as f:
+            linhas = f.readlines()
+            if not linhas:
+                return False
+            for linha in linhas[-10:]:
+                if linha.strip().startswith("|9999|"):
+                    return True
+    except Exception:
+        try:
+            with open(caminho_arquivo, "r", encoding="iso-8859-1", errors="ignore") as f:
+                linhas = f.readlines()
+                if not linhas:
+                    return False
+                for linha in linhas[-10:]:
+                    if linha.strip().startswith("|9999|"):
+                        return True
+        except Exception:
+            pass
+    return False
+
+
+def _limpar_arquivos_sped_temporarios(tipo: str):
+    """Remove arquivos SPED antigos de C:\\ACS_Exporta antes do clique de geracao, de acordo com o tipo ('fiscal' ou 'contrib')."""
+    try:
+        from config import SPED_EXPORT_DIR
+        if not os.path.exists(SPED_EXPORT_DIR):
+            return
+        logger.info(f"Limpando arquivos residuais do tipo '{tipo}' em '{SPED_EXPORT_DIR}'...")
+        removidos = 0
+        for f in os.listdir(SPED_EXPORT_DIR):
+            fl = f.lower()
+            if fl.endswith(".txt") and not any(s in fl for s in ["_fiscal", "_contrib", "_comitens", "_semitens"]):
+                if tipo == "fiscal" and any(p in fl for p in ["sped", "spedefd"]):
+                    try:
+                        os.remove(os.path.join(SPED_EXPORT_DIR, f))
+                        removidos += 1
+                    except Exception:
+                        pass
+                elif tipo == "contrib" and "contrib" in fl:
+                    try:
+                        os.remove(os.path.join(SPED_EXPORT_DIR, f))
+                        removidos += 1
+                    except Exception:
+                        pass
+        if removidos > 0:
+            logger.info(f"Limpeza de startup: {removidos} arquivo(s) residuais removidos.")
+    except Exception as e:
+        logger.warning(f"Erro na limpeza de arquivos temporarios: {e}")
+
+
+def _aguardar_geracao_e_fechar(titulo_sped: str, timeout=180, tempo_inicial: float = None) -> bool:
     """
     Aguarda SPED ser gerado e fecha dialogs pos-geracao.
 
@@ -570,13 +631,19 @@ def _aguardar_geracao_e_fechar(titulo_sped: str, timeout=180) -> bool:
     4. Fecha config se ainda aberta
     """
     from pywinauto import keyboard
+    from pywinauto import Desktop
+    import win32gui
 
-    TIMEOUT_INATIVO = 120  # timeout se sem atividade por 120s
+    TETO_GERACAO_S = 3600  # 1 hora (evita loop infinito se ACS travar aberto)
+    TIMEOUT_INATIVO = 120  # desiste se ACS inativo (CPU/IO idle) por 120s
+
+    start = time.time()
+    ultimo_ativo = time.time()
+    ref_tempo_arquivo = tempo_inicial if tempo_inicial is not None else start
     TETO_GERACAO_S = 3000  # teto absoluto de 50min para geracao ATIVA (bancos grandes)
     EARLY_EXIT_CHECK = 15  # apos 15s idle desde inicio, verifica se ja concluiu
 
     logger.info(f"Aguardando geracao SPED (timeout base={timeout}s, dinamico ativo)...")
-    start = time.time()
     ultimo_ativo = time.time()
     desktop = Desktop(backend="win32")
     ja_foi_ativo = False  # rastreia se ACS foi ativo pelo menos 1x
@@ -707,6 +774,26 @@ def _aguardar_geracao_e_fechar(titulo_sped: str, timeout=180) -> bool:
                             esta_carregando = True
                             titulo_carregamento = w.window_text()
                             break
+                    # Popup de PROGRESSO do ACS (classe TAviso, SEM botao): mostra
+                    # "Notas de Saida - Produto: ...", "Gerando os Registros: C100..."
+                    # etc. e fica visivel a maior parte da geracao de Contribuicoes
+                    # em bancos grandes. O texto ("Notas de Saida") nao casa com as
+                    # palavras acima, entao sem isto o cronometro de inatividade
+                    # avancava e a automacao desistia/fechava a subtela cedo demais
+                    # (caso ANDRADE 2026-07-11: arquivo completou mas nao foi
+                    # coletado apos 4 tentativas). Popup COM botao e' o 'Aviso' final
+                    # de conclusao e e' tratado adiante — por isso exigimos SEM botao.
+                    if cls == "taviso" and w.window_text():
+                        try:
+                            tem_botao = any(
+                                "button" in (c.class_name() or "").lower()
+                                for c in w.children())
+                        except Exception:
+                            tem_botao = False
+                        if not tem_botao:
+                            esta_carregando = True
+                            titulo_carregamento = w.window_text()
+                            break
         except Exception:
             pass
 
@@ -719,6 +806,9 @@ def _aguardar_geracao_e_fechar(titulo_sped: str, timeout=180) -> bool:
         elif _acs_esta_ativo():
             ultimo_ativo = time.time()
             ja_foi_ativo = True
+            if time.time() - ultimo_log_carregamento > 30:
+                logger.info("Identificado atividade de CPU/IO ativa no processo gerente.exe. Impedindo interrupção.")
+                ultimo_log_carregamento = time.time()
 
         # Checa se o processo gerente.exe ainda esta rodando no SO (detecta crash durante a geracao)
         proc_running = False
@@ -782,13 +872,15 @@ def _aguardar_geracao_e_fechar(titulo_sped: str, timeout=180) -> bool:
                 caminho = os.path.join(SPED_EXPORT_DIR, f)
                 if os.path.isfile(caminho):
                     mtime = os.path.getmtime(caminho)
-                    if mtime >= start:
+                    if mtime >= ref_tempo_arquivo:
                         fl = f.lower()
                         if fl.endswith(".txt") and any(p in fl for p in ["sped", "contribui", "spedefd"]):
-                            logger.info(f"Detecção por arquivo: Novo arquivo SPED encontrado: '{f}'")
-                            time.sleep(2.0)  # Garantia para o ACS terminar de escrever
-                            geracao_ja_concluiu = True
-                            break
+                            if verificar_registro_9999(caminho):
+                                logger.info(f"Detecção por arquivo: Arquivo SPED concluído encontrado: '{f}'")
+                                geracao_ja_concluiu = True
+                                break
+                            else:
+                                logger.debug(f"Arquivo '{f}' encontrado, mas ainda sem |9999| no final. Aguardando escrita...")
             if geracao_ja_concluiu:
                 break
         except Exception as e:
@@ -1461,7 +1553,7 @@ def _abrir_menu_opcoes(app_win):
         logger.info(f"Menu: janela '{app_win.window_text()}' ativa")
 
     # Menus sao posicao fixa, nao usar _coord_rel
-    c1 = (302, 33)   # Opcoes (conforme opções fiscal.txt)
+    c1 = (265, 33)   # Opcoes (conforme opções fiscal.txt)
     c2 = (349, 112)  # Exportacao de arquivos (conforme opções fiscal.txt)
 
     try:
@@ -1483,6 +1575,36 @@ def _abrir_menu_opcoes(app_win):
         rect = app_win.rectangle()
         mouse.click(coords=(rect.left + c2[0], rect.top + c2[1]))
     time.sleep(1.5)
+
+
+def _garantir_submissao_export(titulo: str, idx_btn_ok: int, rotulo: str) -> None:
+    """
+    Guard pos-OK: se a tela de exportacao continua aberta com o botao OK
+    HABILITADO, o click de OK nao pegou (roubo de foco intermitente — casos
+    REMIGIO SEM_ITENS e DA SERRA INVENTARIO 2026-07-11: o formulario ficou
+    parado esperando OK por 28 min enquanto o monitor via a janela aberta e
+    estendia a espera para sempre). Durante geracao REAL o OK fica
+    desabilitado, entao re-clicar aqui e' seguro e idempotente.
+    """
+    for _ in range(2):
+        try:
+            win = _find_window(titulo, timeout=2)
+            if win is None:
+                return  # tela fechou/submeteu
+            btn = _get_control_by_class(win, "TBitBtn", idx_btn_ok)
+            if btn is None or not btn.is_enabled():
+                return  # gerando (OK desabilitado) ou sem botao — nada a fazer
+            logger.warning(f"Tela {rotulo} ainda aguardando OK (click nao pegou?) — re-clicando")
+            _focar_janela(win)
+            time.sleep(0.3)
+            if _safe_click(btn, f"OK ({rotulo}) [retry]"):
+                time.sleep(1.0)
+                _confirmar_atencao()
+                _confirmar_dados_sped(timeout=10)
+        except Exception as e:
+            logger.debug(f"_garantir_submissao_export({rotulo}): {e}")
+            return
+        time.sleep(3)
 
 
 def gerar_fiscal(app_win, opcao: str = "") -> bool:
@@ -1524,6 +1646,8 @@ def gerar_fiscal(app_win, opcao: str = "") -> bool:
 
         fiscal_win.set_focus()
 
+        _limpar_arquivos_sped_temporarios("fiscal")
+        hora_inicio = time.time()
         # Clica OK (TBitBtn3) — verifica que tela fiscal fechou
         btn_ok = _get_control_by_class(fiscal_win, "TBitBtn", 3)
         if not _safe_click(btn_ok, "OK (Fiscal)"):
@@ -1539,8 +1663,11 @@ def gerar_fiscal(app_win, opcao: str = "") -> bool:
         # Dados do SPED -> OK (verifica com retry, mas nao-fatal se ausente)
         _confirmar_dados_sped()
 
+        # Guard: re-clica OK se o formulario ficou aberto sem submeter
+        _garantir_submissao_export(TITULO_FISCAL, 3, "Fiscal")
+
         # Aguarda geracao + fecha via ENTER/ESC
-        if not _aguardar_geracao_e_fechar(TITULO_FISCAL, timeout=600):
+        if not _aguardar_geracao_e_fechar(TITULO_FISCAL, timeout=600, tempo_inicial=hora_inicio):
             logger.error("Timeout geracao SPED Fiscal")
             return False
 
@@ -1573,7 +1700,7 @@ def gerar_contribuicoes(app_win) -> bool:
             time.sleep(0.5)
             _abrir_menu_opcoes(app_win)
             time.sleep(0.5)
-            c_contrib = (741, 416)
+            c_contrib = (636, 416)
             logger.info(f"Clicando Contribuicoes {c_contrib}")
             try:
                 app_win.click_input(coords=c_contrib)
@@ -1595,6 +1722,8 @@ def gerar_contribuicoes(app_win) -> bool:
 
         contrib_win.set_focus()
 
+        _limpar_arquivos_sped_temporarios("contrib")
+        hora_inicio = time.time()
         # Clica OK (TBitBtn2) — verifica
         btn_ok = _get_control_by_class(contrib_win, "TBitBtn", 2)
         if not _safe_click(btn_ok, "OK (Contribuicoes)"):
@@ -1610,8 +1739,11 @@ def gerar_contribuicoes(app_win) -> bool:
         # Dados do SPED -> OK (opcional — nem todos modos mostram)
         _confirmar_dados_sped(timeout=5)
 
+        # Guard: re-clica OK se o formulario ficou aberto sem submeter
+        _garantir_submissao_export(TITULO_CONTRIB, 2, "Contribuicoes")
+
         # Aguarda geracao + fecha via ENTER/ESC
-        if not _aguardar_geracao_e_fechar(TITULO_CONTRIB, timeout=600):
+        if not _aguardar_geracao_e_fechar(TITULO_CONTRIB, timeout=600, tempo_inicial=hora_inicio):
             logger.error("Timeout geracao SPED Contribuicoes")
             return False
 
@@ -1657,6 +1789,14 @@ def _fechar_avisos_startup(timeout=15):
                     encontrou = True
                     try:
                         children = w.children()
+                        # Log text content of the popup to debug
+                        conteudos = []
+                        for c in children:
+                            t_txt = c.window_text() or ""
+                            if t_txt.strip():
+                                conteudos.append(f"[{c.class_name()}]{t_txt.strip()}")
+                        logger.info(f"Conteudo detalhado do popup '{titulo}': {' | '.join(conteudos)}")
+
                         for c in children:
                             cls = c.class_name() or ""
                             if "Button" in cls or "TBitBtn" in cls or "TButton" in cls:
@@ -1679,6 +1819,53 @@ def _fechar_avisos_startup(timeout=15):
             break
         time.sleep(0.5)
     return fechou
+
+
+def _dbname_do_ini() -> str:
+    """Le o banco alvo (caminho=) do acsgerente.ini atual. '' se nao conseguir."""
+    from config import ACS_INI_PATH
+    try:
+        with open(ACS_INI_PATH, encoding="latin-1") as f:
+            for linha in f:
+                if linha.strip().lower().startswith("caminho="):
+                    return linha.split("=", 1)[1].strip()
+    except Exception:
+        pass
+    return ""
+
+
+def _matar_autovacuum(dbname: str) -> None:
+    """
+    Encerra workers de autovacuum conectados ao banco alvo.
+
+    O upgrade de estrutura do Gerente (NAT antigo -> atual) recusa rodar com
+    "outras conexoes ativas" e o gerente.exe fecha — e todo banco recem-
+    restaurado dispara autovacuum em ~1 min (comprovado 2026-07-10: cascata de
+    falhas 'gerente terminou antes do login' em serie ate matar o autovacuum na
+    mao). Matar autovacuum e' inofensivo: o PostgreSQL simplesmente re-agenda.
+    """
+    if not dbname:
+        return
+    from config import PG_HOST, PG_PORT, PG_USER, PG_PASSWORD
+    try:
+        import psycopg2
+        conn = psycopg2.connect(host=PG_HOST, port=PG_PORT, user=PG_USER,
+                                password=PG_PASSWORD, dbname="postgres",
+                                connect_timeout=5)
+        conn.autocommit = True
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT pg_terminate_backend(pid) FROM pg_stat_activity
+            WHERE datname = %s AND query LIKE 'autovacuum:%%'
+        """, (dbname,))
+        mortos = cur.rowcount
+        cur.close()
+        conn.close()
+        if mortos:
+            logger.info(f"Autovacuum encerrado em '{dbname}' ({mortos} worker(s)) "
+                        f"para nao bloquear o upgrade de estrutura do Gerente")
+    except Exception as e:
+        logger.debug(f"_matar_autovacuum({dbname}): {e}")
 
 
 def _timeout_abertura_acs() -> int:
@@ -1758,8 +1945,18 @@ def iniciar_sessao_acs(empresa_nome: str = "") -> tuple:
     timeout_abrir = _timeout_abertura_acs()
     logger.info(f"Aguardando ACS Gerente abrir (ate {timeout_abrir}s)...")
     acs_abriu = False
+    dbname_alvo = _dbname_do_ini()
+    _matar_autovacuum(dbname_alvo)
+    ultimo_kill_autovacuum = time.time()
     start = time.time()
     while time.time() - start < timeout_abrir:
+        # Autovacuum no banco alvo bloqueia o upgrade de estrutura do Gerente
+        # (ele fecha com "outras conexoes ativas") — mantem o banco limpo
+        # enquanto o Gerente nao terminou de abrir/migrar.
+        if time.time() - ultimo_kill_autovacuum >= 5:
+            _matar_autovacuum(dbname_alvo)
+            ultimo_kill_autovacuum = time.time()
+
         # Fecha dialogs "Aviso" de startup de forma proativa dentro do loop para evitar deadlock
         _fechar_avisos_startup(timeout=2)
         
@@ -1775,6 +1972,23 @@ def iniciar_sessao_acs(empresa_nome: str = "") -> tuple:
             logger.info("Janela principal ACS detectada (sem login)")
             acs_abriu = True
             break
+
+        # Checa se gerente.exe ainda esta rodando (evita esperar minutos se crashou)
+        elapsed = time.time() - start
+        if elapsed > 5:
+            import psutil
+            gerente_rodando = False
+            try:
+                for proc in psutil.process_iter(attrs=["name"]):
+                    if proc.info["name"] and proc.info["name"].lower() == "gerente.exe":
+                        gerente_rodando = True
+                        break
+            except Exception:
+                gerente_rodando = True
+            if not gerente_rodando:
+                logger.error("Processo gerente.exe terminou inesperadamente antes do login")
+                break
+
         time.sleep(0.5)
 
     if not acs_abriu:

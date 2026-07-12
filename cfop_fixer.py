@@ -115,18 +115,13 @@ def _corrigir_par(cur, resumo: list[str], depto: str, cfop: str) -> int:
         resumo.append(f"depto {str(codigo_real).strip()} ({str(descricao).strip()}) / CFOP alvo {cfop} — "
                       f"header {coluna_header or 'N/A'} = {valor_header_atual!r}")
 
-        cur.execute(f"""
-            SELECT DISTINCT cod_empresa FROM cfop_depto
-            WHERE trim(cod_depto) IN ({placeholders})
-        """, variantes)
+        # TODAS as empresas do grid — nao so as que ja tem linhas deste depto.
+        # Caso MANANCIAL BEBIDAS (2026-07-10): a empresa 04 nao tinha NENHUMA
+        # linha do depto 018 em cfop_depto; iterar so as empresas do depto
+        # pulava exatamente a empresa que precisava do insert ("ja existe" nas
+        # outras) e o erro do ACS persistia.
+        cur.execute("SELECT DISTINCT cod_empresa FROM cfop_depto")
         empresas = [r[0] for r in cur.fetchall()]
-
-        # Depto sem NENHUMA linha no grid (caso Barauna): insere para todas as
-        # empresas do banco, clonando o CFOP de outro departamento (fallback 4).
-        if not empresas:
-            cur.execute("SELECT DISTINCT cod_empresa FROM cfop_depto")
-            empresas = [r[0] for r in cur.fetchall()]
-            resumo.append(f"  depto sem linhas em cfop_depto — usando todas as empresas: {empresas}")
 
         for cod_empresa in empresas:
             cur.execute(f"""
@@ -182,6 +177,20 @@ def _corrigir_par(cur, resumo: list[str], depto: str, cfop: str) -> int:
                 r = cur.fetchone()
                 if r:
                     template_cfop = f"{cfop} (depto {str(r[0]).strip()})"
+                    template_row = r[1:]
+
+            # 5) MESMO departamento em OUTRA empresa do banco com o MESMO CFOP
+            #    alvo (a config fiscal do par depto+CFOP tende a ser identica
+            #    entre as empresas do mesmo grupo — caso MANANCIAL/alianca)
+            if template_row is None:
+                cur.execute(f"""
+                    SELECT cod_empresa, {', '.join(CFOP_DEPTO_COLS)} FROM cfop_depto
+                    WHERE trim(cod_depto) IN ({placeholders}) AND cod_cfop=%s
+                    ORDER BY cod_empresa LIMIT 1
+                """, variantes + [cfop])
+                r = cur.fetchone()
+                if r:
+                    template_cfop = f"{cfop} (empresa {str(r[0]).strip()})"
                     template_row = r[1:]
 
             if template_row is None:

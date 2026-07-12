@@ -276,6 +276,18 @@ def _executar_acs_tentativa(modo: str, qtd_esperada: int, empresa_nome: str = ""
     app_win, handler = None, None
     for i in range(1, ACS_ABRIR_MAX_TENTATIVAS + 1):
         try:
+            # Desconecta sessoes intrusas do banco alvo (lido do .ini — esta
+            # funcao nao recebe nome_base) para o upgrade de estrutura do
+            # Gerente nao abortar com "outras conexoes ativas". Best-effort:
+            # falha aqui NAO pode impedir o lancamento do ACS.
+            try:
+                from postgres_manager import _desconectar_sessoes
+                from acs_automation import _dbname_do_ini
+                nome_db = _dbname_do_ini()
+                if nome_db:
+                    _desconectar_sessoes(nome_db)
+            except Exception as e:
+                logger.warning(f"Desconexao pre-lancamento falhou (seguindo mesmo assim): {e}")
             subprocess.Popen([exe])
             if i == 1:
                 logger.info(f"ACS Gerente lancado: {exe}")
@@ -399,7 +411,8 @@ def executar_acs_e_gerar_sped(nome_posto: str, nome_base: str = "",
                               informacoes_sped: str | None = None,
                               exe_path: str = None,
                               steps_ja_gerados: set[str] = None,
-                              modo_override: str = None) -> list[str]:
+                              modo_override: str = None,
+                              cnpj_supabase: str = "") -> list[str]:
     """
     Pipeline completo com retry inteligente e sucesso parcial:
     - Descobre nome_fantasia real da empresa no banco local.
@@ -425,7 +438,7 @@ def executar_acs_e_gerar_sped(nome_posto: str, nome_base: str = "",
     empresa_nome = ""
     if nome_base:
         nome_db = f"{nome_base.lower()}_local"
-        empresa_nome = descobrir_nome_empresa(nome_db, nome_posto)
+        empresa_nome = descobrir_nome_empresa(nome_db, nome_posto, cnpj_supabase=cnpj_supabase)
         if empresa_nome is None:
             logger.error(f"Abortando: empresa '{nome_posto}' nao localizada em '{nome_db}'")
             return []
@@ -444,7 +457,9 @@ def executar_acs_e_gerar_sped(nome_posto: str, nome_base: str = "",
     steps_concluidos = set(steps_ja_gerados) if steps_ja_gerados else set()
     tentativa = 0
     sem_progresso = 0
-    cfop_fix_tentado = False  # correcao automatica de CFOP: no maximo 1x por execucao
+    cfop_fix_tentado = False   # correcao automatica de CFOP: no maximo 1x por execucao
+    ncm_fix_tentado = False    # correcao automatica de NCM: no maximo 1x por execucao
+    saldo_fix_tentado = False  # correcao automatica de saldo_mes: no maximo 1x por execucao
 
     while tentativa < MAX_TENTATIVAS_ABS:
         # CONTROLE (ADD7): entre sessoes do ACS — PARAR aborta mantendo os
@@ -491,7 +506,65 @@ def executar_acs_e_gerar_sped(nome_posto: str, nome_base: str = "",
             # nada corrigivel, propaga (vira erro definitivo de dados no tracking).
             from cfop_fixer import DepartamentoSemCfopError, corrigir_cfops_banco
             if not isinstance(e_gen, DepartamentoSemCfopError):
-                raise
+                # NCM invalido: corrigivel automaticamente no banco _local
+                # (troca pelo NCM dos produtos irmaos — ncm_fixer). O _local e'
+                # re-restaurado a cada ciclo, entao a correcao roda de novo
+                # sempre que o erro reaparecer. 1 tentativa por execucao.
+                # Saldo de fim de mes ausente: dialog 'Atenção' "Os saldos dos
+                # diversos do final do mês ainda não foram registrados!" —
+                # roda fix_saldo_mes_inventario (insere o registro de fim do
+                # mes anterior, FK-safe) e repete. Caso DA SERRA 2026-07-11.
+                msg_low = str(e_gen).lower()
+                if ("saldo" in msg_low and "registrad" in msg_low
+                        and not saldo_fix_tentado and nome_base):
+                    saldo_fix_tentado = True
+                    nome_db = f"{nome_base.lower()}_local"
+                    logger.warning(f"Saldo de fim de mes ausente em '{nome_posto}' — "
+                                   f"rodando fix_saldo_mes_inventario em '{nome_db}'")
+                    auditoria.evento(nome_posto, "CORRECAO",
+                                     "ACS acusou saldos do fim do mes nao registrados — "
+                                     "inserindo registro em saldo_mes e repetindo a geracao",
+                                     nivel="aviso")
+                    from postgres_manager import fix_saldo_mes_inventario
+                    if fix_saldo_mes_inventario(nome_db):
+                        sem_progresso = 0
+                        continue
+                    auditoria.evento(nome_posto, "CORRECAO",
+                                     "fix_saldo_mes_inventario falhou — erro segue",
+                                     nivel="erro")
+                    raise
+
+                from ncm_fixer import extrair_barras_ncm, corrigir_ncms_banco
+                barras = extrair_barras_ncm(str(e_gen))
+                if not barras or ncm_fix_tentado or not nome_base:
+                    raise
+                ncm_fix_tentado = True
+                nome_db = f"{nome_base.lower()}_local"
+                logger.warning(f"NCM invalido em '{nome_posto}': barras {barras} — "
+                               f"corrigindo automaticamente em '{nome_db}'")
+                auditoria.evento(nome_posto, "CORRECAO",
+                                 f"NCM invalido detectado (barras {barras}) — "
+                                 f"corrigindo pelo NCM dos produtos irmaos no banco local",
+                                 nivel="aviso")
+                try:
+                    corrigiu_ncm, resumo_ncm = corrigir_ncms_banco(nome_db, barras)
+                except Exception as e_fix:
+                    logger.error(f"Correcao automatica de NCM falhou: {e_fix}")
+                    auditoria.evento(nome_posto, "CORRECAO",
+                                     f"Correcao automatica de NCM falhou: {e_fix}", nivel="erro")
+                    raise e_gen from e_fix
+                for linha in resumo_ncm:
+                    logger.info(f"[ncm_fixer] {linha}")
+                if not corrigiu_ncm:
+                    auditoria.evento(nome_posto, "CORRECAO",
+                                     f"Nada corrigivel para barras {barras} em {nome_db} — "
+                                     f"precisa de correcao manual", nivel="erro")
+                    raise
+                auditoria.evento(nome_posto, "CORRECAO",
+                                 f"NCM(s) corrigido(s) no banco local (barras {barras}) — "
+                                 f"repetindo a geracao")
+                sem_progresso = 0
+                continue
             if cfop_fix_tentado or not nome_base:
                 raise
             cfop_fix_tentado = True

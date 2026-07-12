@@ -423,6 +423,86 @@ ipcMain.handle('save-file-dialog', async (event, { content, defaultName, filters
 })
 
 // ----------------------------------------------------
+// IPC Handler - Enviar arquivos SPED via Outlook
+// ----------------------------------------------------
+
+// Codifica texto como encoded-word RFC 2047 quando tem caractere fora do ASCII
+function mimeEncodeHeader(text) {
+  if (/^[\x20-\x7e]*$/.test(text)) return text
+  return `=?UTF-8?B?${Buffer.from(text, 'utf8').toString('base64')}?=`
+}
+
+// Abre o seletor de arquivos em C:\ACS_Exporta, monta um rascunho .eml
+// (X-Unsent: 1) com os anexos e abre no cliente de e-mail padrão.
+// O Outlook "Nova Versão" (olk.exe) não expõe COM/MAPI, então o .eml de
+// rascunho é a única integração que preenche destinatário+assunto+anexos.
+ipcMain.handle('send-outlook-email', async (event, { basePath, recipient }) => {
+  try {
+    const startDir = basePath && fs.existsSync(basePath) ? basePath : 'C:\\ACS_Exporta'
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: 'Selecione os arquivos SPED para enviar',
+      defaultPath: startDir,
+      properties: ['openFile', 'multiSelections'],
+      filters: [
+        { name: 'Arquivos SPED (*.txt)', extensions: ['txt'] },
+        { name: 'Todos os arquivos', extensions: ['*'] },
+      ],
+    })
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: false, canceled: true }
+    }
+
+    const files = result.filePaths
+    const folderName = path.basename(path.dirname(files[0]))
+    const subject = `SPED | ${folderName}`
+
+    // Monta o .eml (MIME multipart/mixed) com os anexos em base64
+    const boundary = '----=_SPED_' + crypto.randomUUID().replace(/-/g, '')
+    const lines = [
+      'X-Unsent: 1',
+      `To: ${recipient}`,
+      `Subject: ${mimeEncodeHeader(subject)}`,
+      'MIME-Version: 1.0',
+      `Content-Type: multipart/mixed; boundary="${boundary}"`,
+      '',
+      `--${boundary}`,
+      'Content-Type: text/plain; charset=utf-8',
+      'Content-Transfer-Encoding: 7bit',
+      '',
+      '',
+    ]
+    for (const fp of files) {
+      const name = path.basename(fp)
+      const data = await fs.promises.readFile(fp)
+      const b64 = data.toString('base64').replace(/(.{76})/g, '$1\r\n')
+      lines.push(
+        `--${boundary}`,
+        `Content-Type: application/octet-stream; name="${mimeEncodeHeader(name)}"`,
+        'Content-Transfer-Encoding: base64',
+        `Content-Disposition: attachment; filename="${mimeEncodeHeader(name)}"`,
+        '',
+        b64,
+        ''
+      )
+    }
+    lines.push(`--${boundary}--`, '')
+
+    const emlDir = path.join(app.getPath('temp'), 'speedsped-email')
+    await fs.promises.mkdir(emlDir, { recursive: true })
+    const emlPath = path.join(emlDir, `${subject.replace(/[\\/:*?"<>|]/g, '_')}_${Date.now()}.eml`)
+    await fs.promises.writeFile(emlPath, lines.join('\r\n'))
+
+    const openError = await shell.openPath(emlPath)
+    if (openError) {
+      return { success: false, error: `Não foi possível abrir o Outlook: ${openError}. Verifique se o Outlook está instalado e definido como cliente de e-mail padrão.` }
+    }
+    return { success: true, subject, fileCount: files.length }
+  } catch (error) {
+    return { success: false, error: error.message }
+  }
+})
+
+// ----------------------------------------------------
 // App Lifecycle
 // ----------------------------------------------------
 

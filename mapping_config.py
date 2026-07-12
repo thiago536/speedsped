@@ -8,7 +8,6 @@
 # 1. BASES A IGNORAR: Bases de dados que devem ser completamente puladas.
 # Exemplo: Bases do tipo Web que não possuem arquivo físico de backup.
 BASES_IGNORAR = {
-    "borborema",  # Aliança CG (Web, não possui backup físico)
     "veneza",     # Posto Veneza (não é nuvem e nem está na lista de liberados - ignorar)
 }
 
@@ -17,6 +16,7 @@ BASES_IGNORAR = {
 MAPEAMENTO_BASES = {
     "jrcaicara": "jr",  # O banco JRcaicara na verdade usa o backup/banco 'jr'
     "meneizao": "rdl",  # Supabase diz 'Meneizao' mas o banco no servidor e 'RDL' (AUTO POSTO RDL LTDA, conferido 2026-06-11)
+    "borborema": "alianca",  # POSTO ALIANÇA CG: Supabase diz 'Borborema' (Web, sem backup) mas o CNPJ 37.309.700/0001-72 = empresa 02 'AUTO POSTO ALIANCA CG' do banco 'alianca' (conferido 2026-07-10)
 }
 
 # 3. DE-PARA DE EMPRESAS: Mapeia o nome fantasia do Supabase para o nome fantasia interno
@@ -29,6 +29,7 @@ MAPEAMENTO_EMPRESAS = {
     "POSTO DM ANGICOS": "POSTO DM V",        # DM Angicos é na verdade DM V no banco
     "POSTO PEDRO RAMOS": "AUTO POSTO JM",    # Pedro Ramos usa a base que tem 'AUTO POSTO JM' internamente
     "FERREIRA E TAVARES": "POSTO REIS",      # Base FerreiraeTavares tem só 'POSTO REIS' (CNPJ 20320813000176) internamente
+    "POSTO GRAVATA": "POSTO GRAVATA LTDA",   # Evita matching com POSTO GRAVATA BV
 }
 
 

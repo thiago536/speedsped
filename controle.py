@@ -85,6 +85,9 @@ def aguardar_se_pausado(checkpoint: str = "") -> bool:
       True  — pode continuar (normal, ou retomado apos pausa)
       False — deve abortar (estado virou 'parar')
     """
+    import sys
+    if "--daemon" not in sys.argv:
+        return True
     estado = obter_estado()
     if estado == "parar":
         return False
